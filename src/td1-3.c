@@ -99,7 +99,7 @@ int encode(unsigned char *dest, unsigned char *src, int N)
 int decode(unsigned char *dest, unsigned char *src, int P)
 {
     BitStream stream = {src, CHAR_BIT}; // Initialisation du flux binaire
-    int total_values = 0;               // Nombre total de valeurs décodées
+    int total_values = 0; // Nombre total de valeurs décodées
 
     for (int i = 0; i < P; i++)
     {
@@ -107,16 +107,14 @@ int decode(unsigned char *dest, unsigned char *src, int P)
 
         // Lecture du préfixe
         pull_bits(&stream, &prefix, 1); // Lire 1 bit
-        if (prefix == 0b0)
-        {                                  // Préfixe : Intervalle [0, 4[
+        if (prefix == 0b0) { // Préfixe : Intervalle [0, 4[
             pull_bits(&stream, &value, 2); // Lire 2 bits
             dest[total_values++] = value;
             continue;
         }
 
         pull_bits(&stream, &prefix, 1); // Lire le 2e bit
-        if (prefix == 0b0)
-        {                                  // Préfixe : Intervalle [4, 20[
+        if (prefix == 0b0) { // Préfixe : Intervalle [4, 20[
             pull_bits(&stream, &value, 4); // Lire 4 bits
             dest[total_values++] = value + 4;
             continue;
