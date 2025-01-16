@@ -1,11 +1,16 @@
 #include <difimg.h>
 
-void print_binary(unsigned char byte)
+void print_binary(uchar *src, int N)
 {
-    for (int i = 7; i >= 0; i--)
+    for (int i = 0; i < N; i++)
     {
-        printf("%d", (byte >> i) & 1);
+        for (int j = 7; j >= 0; j--)
+        {
+            printf("%d", (src[i] >> j) & 1);
+        }
+        printf(" ");
     }
+    printf("\n");
 }
 
 // Fonction push_bits (corrigée)
@@ -110,51 +115,54 @@ int encode_differences(unsigned char *dest, int *src, int N)
     BitStream stream = {dest, CHAR_BIT};
     int total_bits = 0;
 
-    for (int i = 0; i < N; i++) {
-        int d = src[i]; // Différence à encoder
+    for (int i = 0; i < N; i++)
+    {
+        int d = src[i];                        // Différence à encoder
         unsigned char sign = (d < 0) ? 1 : 0;  // Signe de la différence
         unsigned int abs_d = (d < 0) ? -d : d; // Valeur absolue de la différence
-        printf("abs_d : %d\n", abs_d);
 
-        if (abs_d < 2) { // Intervalle [0, 2[
+        if (abs_d < 2)
+        {                                 // Intervalle [0, 2[
             push_bits(&stream, 0b0, 1);   // Préfixe : 1 bit
             push_bits(&stream, abs_d, 1); // Valeur : 1 bit
             push_bits(&stream, sign, 1);  // Signe : 1 bit
             // total_bits += 3;             // Total : 3 bits
-        } else if (abs_d < 6) { // Intervalle [2, 6[
+        }
+        else if (abs_d < 6)
+        {                                     // Intervalle [2, 6[
             push_bits(&stream, 0b10, 2);      // Préfixe : 2 bits
             push_bits(&stream, abs_d - 2, 2); // Valeur : 2 bits
             push_bits(&stream, sign, 1);      // Signe : 1 bit
             // total_bits += 5;                  // Total : 5 bits
-        } else if (abs_d < 22) { // Intervalle [6, 22[
+        }
+        else if (abs_d < 22)
+        {                                     // Intervalle [6, 22[
             push_bits(&stream, 0b110, 3);     // Préfixe : 3 bits
             push_bits(&stream, abs_d - 6, 4); // Valeur : 4 bits
             push_bits(&stream, sign, 1);      // Signe : 1 bit
             // total_bits += 8;                  // Total : 8 bits
-        } else { // Intervalle [22, 256[
+        }
+        else
+        {                                      // Intervalle [22, 256[
             push_bits(&stream, 0b111, 3);      // Préfixe : 3 bits
             push_bits(&stream, abs_d - 22, 8); // Valeur : 8 bits
             push_bits(&stream, sign, 1);       // Signe : 1 bit
             // total_bits += 12;                  // Total : 12 bits
         }
-
     }
 
     return (int)(stream.ptr - dest) * CHAR_BIT + (CHAR_BIT - stream.cap); // return total_bits;
 }
 
-int decode_differences(int *dest, unsigned char *src, int P) {
+int decode_differences(uchar *dest, uchar *src, int P)
+{
     BitStream stream = {src, CHAR_BIT};
-    memset(dest, 0, P * sizeof(int));
-
-    int total_values = 0;
-
+    int N = 0;
     signed char first_pixel;
-    pull_bits(&stream, (uchar *)&first_pixel, CHAR_BIT);
-    dest[total_values++] = first_pixel;
 
-    for (int i = 1; i < P; i++) {
-        uchar prefix, value, sign;
+    for (int i = 0; i < P; i++) {
+        uchar prefix = 0;
+        char value, sign;
         for (int j = 0; j < 3; j++) {
             uchar bit;
             pull_bits(&stream, &bit, 1);
@@ -164,49 +172,46 @@ int decode_differences(int *dest, unsigned char *src, int P) {
                 break;
             }
         }
+        printf("Prefix: %d\n", prefix);
 
         if (prefix == 0b0) {
             pull_bits(&stream, &value, 1);
             pull_bits(&stream, &sign, 1);
-            i+=2;
+            i += 2;
         } else {
-            if (prefix == 0b0) {
+            if (prefix == 0b10) {
                 pull_bits(&stream, &value, 2);
                 pull_bits(&stream, &sign, 1);
                 value += 2;
-                i+=3;
+                i += 3;
             } else {
-                if (prefix == 0b0) {
+                if (prefix == 0b110) {
                     pull_bits(&stream, &value, 4);
                     pull_bits(&stream, &sign, 1);
                     value += 6;
-                    i+=5;
+                    i += 5;
                 } else {
                     pull_bits(&stream, &value, 8);
                     pull_bits(&stream, &sign, 1);
                     value += 22;
-                    i+=9;
+                    i += 9;
                 }
             }
         }
 
-        int decoded_value = (sign == 1) ? -((int)value) : (int)value;
-
-        if (total_values >= P) {
-            printf("Erreur : dépassement de mémoire !\n");
-            break;
-        }
-
-        dest[total_values] = dest[total_values - 1] + decoded_value;
-        total_values++;
+        char decoded_value = (sign == 1) ? -value : value;
+        dest[N] = decoded_value;
+        N++;
     }
 
-    return total_values;
+    return N;
 }
 
-void reconstruct_pixels(int *differences, int *pixels, int N) {
+void reconstruct_pixels(int *differences, int *pixels, int N)
+{
     pixels[0] = differences[0];
-    for (int i = 1; i < N; i++) {
+    for (int i = 1; i < N; i++)
+    {
         pixels[i] = pixels[i - 1] + differences[i];
     }
 }
@@ -218,29 +223,24 @@ int main()
 
     uchar *dest = malloc(N * sizeof(uchar));
     int encode_size = encode_differences(dest, pixels, N);
-    printf("encode_size : %d\n", encode_size);
+
     printf("Buffer encodé (en binaire) :\n");
-    for (int i = 0; i < encode_size; i++) {
-        print_binary(dest[i]);
-        printf(" ");
-    }
-    printf("\n");
+    print_binary(dest, N - 1);
 
     // Décodage
     int decoded_differences[N];
-    BitStream stream;
-    stream.ptr = dest;
-    stream.cap = CHAR_BIT;
-    int decode_size = decode_differences(&stream, dest, N);
+    char *decoded_dest = malloc(N * sizeof(char));
+    int decode_size = decode_differences(decoded_dest, dest, encode_size);
 
     // Pixels reconstruits
     unsigned char reconstructed_pixels[N];
-    reconstruct_pixels(decoded_differences, reconstructed_pixels, N);
+    // reconstruct_pixels(decoded_differences, reconstructed_pixels, N);
 
     // Affichage des pixels reconstruits
     printf("Pixels reconstruits :\n");
-    for (int i = 0; i < decode_size; i++) {
-        printf("%d ", reconstructed_pixels[i]);
+    for (int i = 0; i < N; i++)
+    {
+        printf("%d ", decoded_dest[i]);
     }
     printf("\n");
 
