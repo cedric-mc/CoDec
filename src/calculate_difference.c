@@ -110,44 +110,37 @@ int encode_differences(unsigned char *dest, int *src, int N)
     BitStream stream = {dest, CHAR_BIT};
     int total_bits = 0;
 
-    for (int i = 0; i < N; i++)
-    {
+    for (int i = 0; i < N; i++) {
         int d = src[i]; // Différence à encoder
         unsigned char sign = (d < 0) ? 1 : 0;  // Signe de la différence
         unsigned int abs_d = (d < 0) ? -d : d; // Valeur absolue de la différence
+        printf("abs_d : %d\n", abs_d);
 
-        if (abs_d < 2)
-        { // Intervalle [0, 2[
+        if (abs_d < 2) { // Intervalle [0, 2[
             push_bits(&stream, 0b0, 1);   // Préfixe : 1 bit
             push_bits(&stream, abs_d, 1); // Valeur : 1 bit
             push_bits(&stream, sign, 1);  // Signe : 1 bit
-            total_bits += 3;
-        }
-        else if (abs_d < 6)
-        { // Intervalle [2, 6[
+            // total_bits += 3;             // Total : 3 bits
+        } else if (abs_d < 6) { // Intervalle [2, 6[
             push_bits(&stream, 0b10, 2);      // Préfixe : 2 bits
             push_bits(&stream, abs_d - 2, 2); // Valeur : 2 bits
             push_bits(&stream, sign, 1);      // Signe : 1 bit
-            total_bits += 5;
-        }
-        else if (abs_d < 22)
-        { // Intervalle [6, 22[
+            // total_bits += 5;                  // Total : 5 bits
+        } else if (abs_d < 22) { // Intervalle [6, 22[
             push_bits(&stream, 0b110, 3);     // Préfixe : 3 bits
             push_bits(&stream, abs_d - 6, 4); // Valeur : 4 bits
             push_bits(&stream, sign, 1);      // Signe : 1 bit
-            total_bits += 8;
-        }
-        else
-        { // Intervalle [22, 256[
+            // total_bits += 8;                  // Total : 8 bits
+        } else { // Intervalle [22, 256[
             push_bits(&stream, 0b111, 3);      // Préfixe : 3 bits
             push_bits(&stream, abs_d - 22, 8); // Valeur : 8 bits
             push_bits(&stream, sign, 1);       // Signe : 1 bit
-            total_bits += 12;
+            // total_bits += 12;                  // Total : 12 bits
         }
 
     }
 
-    return total_bits;
+    return (int)(stream.ptr - dest) * CHAR_BIT + (CHAR_BIT - stream.cap); // return total_bits;
 }
 
 int decode_differences(int *dest, unsigned char *src, int P) {
