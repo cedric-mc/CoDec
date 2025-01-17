@@ -17,7 +17,7 @@ DiffImg dif = {0};
 static bool SWAP = false; /* affichage : false->original  true->copie */
 static bool SAVE_DIF = false; // Flag pour déclencher la sauvegarde de l'image compressée
 
-static char dif_filename[256]; // Stocke le nom du fichier .dif
+static char *dif_filename[256]; // Stocke le nom du fichier .dif
 
 void generate_dif_filename(const char *pgm_filename) {
     // Extraction du nom de fichier sans extension
@@ -197,6 +197,8 @@ int pgmtodif(const char *pgm_filename, const char *diff_filename) {
 // Fonction d'encodage et sauvegarde de l'image en format .dif
 void save_dif_file(const char *filename, G2Xpixmap *img, DiffImg *dif) {
     FILE *file = fopen(filename, "wb");
+
+    printf("%s\n", filename);
     if (!file) {
         perror("Erreur d'ouverture du fichier .dif");
         return;
@@ -237,13 +239,11 @@ void init(void)
 }
 
 static void compress(void) {
-    generate_dif_filename(pathname);
     save_dif_file(dif_filename, img, &dif);
 }
 
 /*! fonction de contrôle      !*/
-void ctrl(void)
-{
+void ctrl(void) {
     // selection de la fonte : ('n':normal,'l':large,'L':LARGE),('n':normal,'b':bold),('l':left, 'c':center, 'r':right)
     g2x_SetFontAttributes('l', 'b', 'c');
     g2x_CreateSwitch("Afficher DIFF", &SWAP, "Basculer entre l'original et l'image différentielle");
@@ -256,10 +256,8 @@ void evts(void)
 }
 
 /*! fonction de dessin        !*/
-void draw(void)
-{
-    switch (SWAP)
-    {
+void draw(void) {
+    switch (SWAP) {
     case false:
         g2x_PixmapRecall(img, true); /* rappel de l'image originale */
         g2x_StaticPrint(10, 10, G2Xr, "Image originale");
@@ -281,16 +279,14 @@ static void quit(void)
 /*! fonction principale       !*/
 /*!***************************!*/
 int main(int argc, char *argv[]) {
-    if (argc < 2)
-    {
+    if (argc < 2) {
         fprintf(stderr, "\e[1musage\e[0m : %s <path_to_image>\n", argv[0]);
         fprintf(stderr, "Image must be in PGM format.\n");
         return 1;
     }
 
     // Si l'extension du fichier est différente de .pgm, alors on affiche un message d'erreur
-    if (strstr(argv[1], ".pgm") == NULL)
-    {
+    if (strstr(argv[1], ".pgm") == NULL) {
         fprintf(stderr, "Image must be in PGM format.\n");
         return 1;
     }
@@ -299,8 +295,7 @@ int main(int argc, char *argv[]) {
      * ouvre directement sur une image
      * -> le pixmap est allouée par la lib. (et libéré également).
      */
-    if (!(img = g2x_InitImage(argv[1], &pathname, &rootname, &extname)))
-    {
+    if (!(img = g2x_InitImage(argv[1], &pathname, &rootname, &extname))) {
         fprintf(stderr, "\e[1m%s\e[0m : cannot read %s \n", argv[0], argv[1]);
         return 1;
     }
