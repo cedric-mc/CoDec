@@ -8,7 +8,7 @@
 #include <difimg.h>
 #include <string.h>
 
-#define MAGIC_NUMBER 0xD1FF
+#define MAGIC_NUMBER 0xD1FF // Identifiant unique pour le format DIFF
 
 /* l'image elle-même : créée/libérée automatiquement par <g2x> */
 static G2Xpixmap *img = NULL, *copie = NULL, *visu = NULL, *orig = NULL;
@@ -20,8 +20,12 @@ static int bitmask = 7;  /* nombre de plans de bits affichés         */
 /* type "pixel différenciel" */
 typedef signed short dword; /* au moins 2 octets donc short */
 
-static DiffImg dif;
+static DiffImg dif; // Structure contenant les données différentielles
 
+/*
+ * Alloue la mémoire pour une image différentielle (DiffImg)
+ * Retourne true si l'allocation est réussie, false sinon.
+ */
 extern bool difalloc(DiffImg *dif, int width, int height)
 {
     dif->map = (dword *)calloc(width * height, sizeof(dword));
@@ -95,6 +99,50 @@ extern bool diftovisu(DiffImg *dif, G2Xpixmap *visu)
     }
     return true;
 }
+
+static void push_bits(BitStream *curr, uchar src, size_t size)
+{
+    if (size <= curr->cap)                  /* si on peut tout écrire */
+    {                                       /* ex. cur->ptr:[xxx-----] et src:[-----abc] */
+        curr->cap -= size;                  /* cur->cap:5, size:3 -> src:[---abc--] */
+        *(curr->ptr) |= (src << curr->cap); /* buf:[xxxabc--] */
+        return;
+    }
+    /* sinon : pas assez de place ex buf:[xxxabc--] et src:[--defghi] */
+    size -= curr->cap;             /* nbre de bits restant: 4 [fghi] */
+    *(curr->ptr) |= (src >> size); /* on copie ce qu’on peut buf:[xxxabcde] */
+    /* => là, il faut passer à l’octet suivant, en pleine capacité */
+    curr->ptr++;          /* on passe a l’octet suivant */
+    curr->cap = CHAR_BIT; /* capacité : totale */
+    /* */
+    if (size == 0)
+        return; /* si il ne reste rien : c’est fini */
+    /* */
+    curr->cap -= size;                  /* réduction de ce qu’il reste : 4 */
+    *(curr->ptr) |= (src << curr->cap); /* cur->ptr:[fghi----] */
+    /* (cur-1)->ptr : [xxxabcde] >> cur->ptr : [fghi----] cur->cap : 4 bits */
+}
+
+static void pull_bits(BitStream *curr, uchar *dst, size_t size)
+{ /* ex. on veut extraire nbit=2 et rbit=5 */                                      /* ex. on veut extraire nbit=8 mais rbit=5 */
+    /* [xxxab***] (x déjà lu, * pas encore lu) */                                  /* [xxxabcde][fgh-----] (x : déjà lu) */
+    *dst = *(curr->ptr); /* dst:[xxxab***] rbit=5 */                               /* dst:[xxxabcde] rbit=5 */
+    *dst <<= (CHAR_BIT - curr->cap); /* dst:[xxxab***] -> dst<<(8-5):[ab***---] */ /* dst:[xxxabcde] -> dst<<(8-5):[abcde---] */
+    *dst >>= (CHAR_BIT - size); /* dst:[ab***---] -> dst>>(8-2):[------ab] */      /* dst:[abcde---] -> dst<<(8-8):[abcde---] */
+    /* -> il reste [------ab] */                                                   /* -> il reste [abcde---] */
+    if (size < curr->cap)                                                          /* si on a tout lu */
+    {                                                                              /* on ajuste la capacité */
+        curr->cap -= size;                                                         /* rbit : 5-2=3 */
+        return;                                                                    /* et c’est fini */
+    } /* ---------------------------------------- */                               /* ----------------------------------------------- */
+    size -= curr->cap;                                                             /* sinon : il reste des bits à lire (ici 8-5=3) */
+    (curr->ptr)++;                                                                 /* => il faut aller dans l’octet suivant */
+    curr->cap = CHAR_BIT;                                                          /* capacité de lecture maximale buf:[fgh******] */
+    if (size == 0)
+        return;                          /* si nbit=0, fini, on sort */
+    curr->cap -= size;                   /* sinon, il faut lire les nbit (ici 3) restant */
+    *dst |= (*(curr->ptr)) >> curr->cap; /* (dst>>(8-3) : [-----fgh] et capacité rbit:8-3=5 */
+} /* => dst:[abcde---]|[-----fgh]->[abcdefgh] */
 
 // Fonction pour encoder une image PGM en DIFF
 int pgmtodif(const char *pgm_filename, const char *diff_filename)
