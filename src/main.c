@@ -12,7 +12,8 @@ DiffImg dif = {0};
 
 /* paramètres d'interaction */
 static bool SWAP_DIFF = false; /* affichage : false->original  true->copie */
-static bool SWAP_histogramDiff = true;
+static bool SWAP_HISTOGRAM_DIFF = false; // Flag pour afficher l'histogramme de l'image différentielle
+static bool SWAP_HISTOGRAM_IMG = false; // Flag pour afficher l'histogramme de l'image originale
 
 static int hMaxDiff= 0; // Valeur maximale de l'histogramme
 static int hMaxImg = 0; // Valeur maximale de l'histogramme
@@ -115,13 +116,22 @@ static void self_negate(void) {
     for (uchar *p = visu->map; p < visu->end; p++) *p = ~*p;
 }
 
+static void self_histogram(void) {
+    // Selon si l'image est l'originale ou la différentielle, on affiche l'histogramme correspondant
+    if (SWAP_DIFF) {
+        SWAP_HISTOGRAM_DIFF = !SWAP_HISTOGRAM_DIFF;
+    } else {
+        SWAP_HISTOGRAM_IMG = !SWAP_HISTOGRAM_IMG;
+    }
+}
+
 /*! fonction de contrôle      !*/
 void ctrl(void) {
     // selection de la fonte : ('n':normal,'l':large,'L':LARGE),('n':normal,'b':bold),('l':left, 'c':center, 'r':right)
     g2x_SetFontAttributes('l', 'b', 'c');
     g2x_CreatePopUp("NEG", self_negate, "négatif sur la copie");
     g2x_CreateSwitch("O/DIF", &SWAP_DIFF, "affiche l'original ou la visuelle");
-    g2x_CreateSwitch("Histogram Show", &SWAP_histogramDiff, "affiche l'histogramDiffgramme");
+    g2x_CreatePopUp("Histogram Show", self_histogram, "affiche l'histogramDiffgramme");
 }
 
 void evts(void)
@@ -132,16 +142,18 @@ void evts(void)
 /*! fonction de dessin        !*/
 void draw(void)
 {
-    switch (SWAP_DIFF)
-    {
-    case false:
-        g2x_PixmapRecall(img, true); /* rappel de l'image originale */
-        display_histogramImg();
-        break;
-    case true:
-        g2x_PixmapShow(visu, true); /* affiche la copie de travail */
+    if (SWAP_DIFF && SWAP_HISTOGRAM_DIFF) {
+        g2x_PixmapShow(visu, true);
         display_histogramDiff();
-        break;
+    } else if (!SWAP_DIFF && SWAP_HISTOGRAM_IMG) {
+        g2x_PixmapRecall(img, true);
+        display_histogramImg();
+    } else if (SWAP_DIFF && !SWAP_HISTOGRAM_DIFF) {
+        g2x_PixmapShow(visu, true);
+    } else if (!SWAP_DIFF && !SWAP_HISTOGRAM_IMG) {
+        g2x_PixmapRecall(img, true);
+    } else {
+        g2x_PixmapRecall(img, true);
     }
 }
 
