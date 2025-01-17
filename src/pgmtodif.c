@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <g2x.h>
-#include <difimg.h>
+#include <difimg.h> 
 
 #define MAGIC_NUMBER 0xD1FF // Identifiant unique pour le format DIFF
 
@@ -15,6 +15,33 @@ DiffImg dif = {0};
 
 /* paramètres d'interaction */
 static bool SWAP = false; /* affichage : false->original  true->copie */
+static bool SAVE_DIF = false; // Flag pour déclencher la sauvegarde de l'image compressée
+
+static char dif_filename[256]; // Stocke le nom du fichier .dif
+
+void generate_dif_filename(const char *pgm_filename) {
+    // Extraction du nom de fichier sans extension
+    const char *basename = strrchr(pgm_filename, '/'); // Trouve le dernier '/'
+    if (basename) {
+        basename++; // Passe après le '/'
+    } else {
+        basename = pgm_filename; // Aucun '/' trouvé, utiliser directement le nom
+    }
+
+    // Copie du nom de base sans extension
+    strncpy(dif_filename, "DIFF/", sizeof(dif_filename) - 1);
+    strncat(dif_filename, basename, sizeof(dif_filename) - strlen(dif_filename) - 1);
+
+    // Remplacement de ".pgm" par ".dif"
+    char *ext = strrchr(dif_filename, '.');
+    if (ext) {
+        strcpy(ext, ".dif"); // Remplace l'extension
+    } else {
+        strncat(dif_filename, ".dif", sizeof(dif_filename) - strlen(dif_filename) - 1);
+    }
+
+    printf("📂 Fichier de sortie : %s\n", dif_filename);
+}
 
 static void push_bits(BitStream *curr, uchar src, size_t size)
 {
@@ -42,7 +69,7 @@ static void push_bits(BitStream *curr, uchar src, size_t size)
 int encode_differences(unsigned char *dest, int *src, int N)
 {
     BitStream stream = {dest, CHAR_BIT};
-    int total_bits = 0;
+    // int total_bits = 0;
 
     for (int i = 0; i < N; i++)
     {
@@ -167,25 +194,51 @@ int pgmtodif(const char *pgm_filename, const char *diff_filename) {
     return 0;
 }
 
+// Fonction d'encodage et sauvegarde de l'image en format .dif
+void save_dif_file(const char *filename, G2Xpixmap *img, DiffImg *dif) {
+    FILE *file = fopen(filename, "wb");
+    if (!file) {
+        perror("Erreur d'ouverture du fichier .dif");
+        return;
+    }
+
+    int N = img->width * img->height;
+    unsigned char *buffer = malloc(1.5 * N);
+    int encoded_size = encode_differences(buffer, dif->map, N);
+
+    unsigned short magic = 0xD1FF;
+    fwrite(&magic, sizeof(unsigned short), 1, file);
+    fwrite(&img->width, sizeof(unsigned short), 1, file);
+    fwrite(&img->height, sizeof(unsigned short), 1, file);
+    unsigned char quant[4] = {0x01, 0x02, 0x04, 0x08};
+    fwrite(quant, sizeof(unsigned char), 4, file);
+    fwrite(&dif->first, sizeof(unsigned char), 1, file);
+    fwrite(buffer, sizeof(unsigned char), (encoded_size + 7) / 8, file);
+
+    free(buffer);
+    fclose(file);
+    printf("✅ Image enregistrée sous : %s\n", filename);
+}
+
 /*! fonction d'initialisation !*/
 void init(void)
 {
-    g2x_PixmapPreload(img); /* Préchargement de l'image */
+    g2x_PixmapPreload(img);
     int w = img->width, h = img->height;
-    difalloc(&dif, w, h); /* Allocation */
-    pixtodif(img, &dif); /* Création */
-    g2x_PixmapAlloc(&visu, w, h, 1, 255); /* Allocation */
-    diftovisu(&dif, visu); /* Création */
-    g2x_PixmapAlloc(&orig, w, h, 1, 255); /* Allocation */
-    diftopix(&dif, orig); /* Création */
+    
+    difalloc(&dif, w, h);
+    pixtodif(img, &dif);
+    
+    g2x_PixmapAlloc(&visu, w, h, 1, 255);
+    diftovisu(&dif, visu);
+
+    g2x_PixmapAlloc(&orig, w, h, 1, 255);
+    diftopix(&dif, orig);
 }
 
-static void compress(void)
-{
-    char *diffname = malloc(strlen(rootname) + 5);
-    sprintf(diffname, "DIFF/%s.dif", rootname);
-    pgmtodif(pathname, diffname);
-    free(diffname);
+static void compress(void) {
+    generate_dif_filename(pathname);
+    save_dif_file(dif_filename, img, &dif);
 }
 
 /*! fonction de contrôle      !*/
@@ -193,8 +246,8 @@ void ctrl(void)
 {
     // selection de la fonte : ('n':normal,'l':large,'L':LARGE),('n':normal,'b':bold),('l':left, 'c':center, 'r':right)
     g2x_SetFontAttributes('l', 'b', 'c');
-    g2x_CreateSwitch("O/DIF", &SWAP, "affiche l'original ou la visuelle");
-    g2x_CreatePopUp("COMPRESSION", compress, "convertit en DIFF");
+    g2x_CreateSwitch("Afficher DIFF", &SWAP, "Basculer entre l'original et l'image différentielle");
+    g2x_CreatePopUp("Sauver .dif", compress, "Sauvegarder l'image compressée");
 }
 
 void evts(void)
@@ -209,9 +262,11 @@ void draw(void)
     {
     case false:
         g2x_PixmapRecall(img, true); /* rappel de l'image originale */
+        g2x_StaticPrint(10, 10, G2Xr, "Image originale");
         break;
     case true:
         g2x_PixmapShow(visu, true); /* affiche la copie de travail */
+        g2x_StaticPrint(10, 10, G2Xr, "Image différentielle");
         break;
     }
 }
@@ -249,6 +304,8 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "\e[1m%s\e[0m : cannot read %s \n", argv[0], argv[1]);
         return 1;
     }
+
+    generate_dif_filename(argv[1]); // Génération du nom de fichier .dif
 
     g2x_SetInitFunction(init); /*! fonction d'initialisation !*/
     g2x_SetCtrlFunction(ctrl); /*! fonction de controle      !*/
