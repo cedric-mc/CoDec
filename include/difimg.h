@@ -36,6 +36,8 @@ bool diffree(DiffImg *dif);
 bool diftopix(DiffImg *dif, G2Xpixmap *pix);
 bool pixtodif(G2Xpixmap *pix, DiffImg *dif);
 bool diftovisu(DiffImg *dif, G2Xpixmap *visu);
+void create_histo(void);
+void show_histo(void);
 int pgmtodif(const char *pgm_filename, const char *diff_filename);
 int diftopgm(const char *diff_filename, const char *pgm_filename);
 

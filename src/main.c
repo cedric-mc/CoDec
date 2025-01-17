@@ -12,6 +12,7 @@ DiffImg dif = {0};
 
 /* paramètres d'interaction */
 static bool SWAP = false; /* affichage : false->original  true->copie */
+static bool  showHST=true;
 
 /*! fonction d'initialisation !*/
 void init(void)
@@ -24,6 +25,8 @@ void init(void)
     diftovisu(&dif, visu); /* Création */
     g2x_PixmapAlloc(&orig, w, h, 1, 255); /* Allocation */
     diftopix(&dif, orig); /* Création */
+
+    create_histo();
 }
 
 /* passe la copie en négatif */
@@ -39,6 +42,7 @@ void ctrl(void)
     g2x_SetFontAttributes('l', 'b', 'c');
     g2x_CreatePopUp("NEG", self_negate, "négatif sur la copie");
     g2x_CreateSwitch("O/DIF", &SWAP, "affiche l'original ou la visuelle");
+    g2x_CreateSwitch("afficher l'histogramme",&showHST,"affiche l'histogramme");
 }
 
 void evts(void)
@@ -52,12 +56,36 @@ void draw(void)
     switch (SWAP)
     {
     case false:
-        g2x_PixmapRecall(img, true); /* rappel de l'image originale */
+        if (showHST) {
+            g2x_PixmapRecall(img, true);
+            create_histo();
+            show_histo();
+        }
+        else {
+            g2x_PixmapRecall(img, true);
+        }
         break;
     case true:
-        g2x_PixmapShow(visu, true); /* affiche la copie de travail */
+        if (showHST) {
+            g2x_PixmapRecall(visu, true);
+            create_histo();
+            show_histo();
+        }
+        else {
+            g2x_PixmapRecall(visu, true);
+        }
         break;
     }
+    
+    // switch (showHST) {
+    //     case false: 
+    //         break;
+    //     case true:
+    //         g2x_PixmapRecall(visu, true);
+    //         create_histo();
+    //         show_histo();
+    //         break;
+    // }
 }
 
 /*! fonction de sortie        !*/
