@@ -21,10 +21,14 @@ LFLAGS = $(libG2X)$(EXT)
 SRC = src/
 
 # Liste des exécutables à générer
-ALL = main
+ALL = main pgmtodif
 
 # Règle spécifique pour l'exécutable 'main'
 main: difimg.o main.o
+	$(CC) $^ $(LFLAGS) -o $@
+
+# Règle spécifique pour l'exécutable 'pgmtodif'
+pgmtodif: difimg.o pgmtodif.o
 	$(CC) $^ $(LFLAGS) -o $@
 
 # Règle générique pour créer un fichier .o à partir d'un fichier .c

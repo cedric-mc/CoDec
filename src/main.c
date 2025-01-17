@@ -11,7 +11,7 @@ static G2Xpixmap *visu = NULL, *orig = NULL;
 DiffImg dif = {0};
 
 /* paramètres d'interaction */
-static bool SWAP = true; /* affichage : false->original  true->copie */
+static bool SWAP = false; /* affichage : false->original  true->copie */
 
 /*! fonction d'initialisation !*/
 void init(void)
