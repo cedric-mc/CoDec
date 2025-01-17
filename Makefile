@@ -39,22 +39,6 @@ main: difimg.o main.o
 	@$(CC) $^ $(LFLAGS) -o $@
 	@echo "------------------------"
 
-# Règles spécifiques pour les exécutables pgmtodif et diftopgm
-pgmtodif: pgmtodif.o difimg.o
-	$(CC) -o pgmtodif pgmtodif.o difimg.o -lg2x
-
-diftopgm: diftopgm.o difimg.o
-	$(CC) -o diftopgm diftopgm.o difimg.o -lg2x
-
-pgmtodif.o: pgmtodif.c difimg.h
-	$(CC) -c pgmtodif.c
-
-diftopgm.o: diftopgm.c difimg.h
-	$(CC) -c diftopgm.c
-
-difimg.o: difimg.c difimg.h
-	$(CC) -c difimg.c
-
 # Génération de tous les exécutables listés dans ALL
 all : $(ALL)
 
