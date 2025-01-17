@@ -189,7 +189,6 @@ int pgmtodif(const char *pgm_filename, const char *diff_filename) {
 void save_dif_file(const char *filename, G2Xpixmap *img, DiffImg *dif) {
     FILE *file = fopen(filename, "wb");
 
-    printf("%s\n", filename);
     if (!file) {
         perror("Erreur d'ouverture du fichier .dif");
         return;
