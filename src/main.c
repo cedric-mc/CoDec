@@ -11,12 +11,92 @@ static G2Xpixmap *visu = NULL, *orig = NULL;
 DiffImg dif = {0};
 
 /* paramètres d'interaction */
-static bool SWAP = false; /* affichage : false->original  true->copie */
-static bool  showHST=true;
+static bool SWAP_DIFF = false; /* affichage : false->original  true->copie */
+static bool SWAP_histogramDiff = true;
+
+static int hMaxDiff= 0; // Valeur maximale de l'histogramme
+static int hMaxImg = 0; // Valeur maximale de l'histogramme
+static int histogramDiff [256] = {0}; // Tableau de l'histogramme de l'image différentielle
+static int histogramImg [256] = {0}; // Tableau de l'histogramme de l'image originale
+
+static void createDiffImg(void) {
+    if (!dif.map || !dif.end) {
+        fprintf(stderr, "Erreur : données de l'image non valides\n");
+        return;
+    }
+
+    if (dif.width <= 0 || dif.height <= 0) {
+        fprintf(stderr, "Erreur : dimensions de l'image incorrectes [%dx%d]\n", dif.width, dif.height);
+        return;
+    }
+
+    for (uchar *p = dif.map; p < dif.end; p++) {
+        if (*p >= 0 && *p < 256) {
+            histogramDiff[*p]++;
+            if (hMaxDiff < histogramDiff[*p]) {
+                hMaxDiff = histogramDiff[*p];
+            }
+        } else {
+            fprintf(stderr, "Valeur pixel invalide : %f\n", *p);
+        }
+    }
+}
+
+static void createImg(void) {
+    if (!img || !img->map || !img->end) {
+        fprintf(stderr, "Erreur : données de l'image non valides\n");
+        return;
+    }
+
+    if (img->width <= 0 || img->height <= 0) {
+        fprintf(stderr, "Erreur : dimensions de l'image incorrectes [%fx%f]\n", img->width, img->height);
+        return;
+    }
+
+    for (uchar *p = img->map; p < img->end; p++) {
+        if (*p >= 0 && *p < 256) {
+            histogramImg[*p]++;
+            if (hMaxImg < histogramImg[*p]) {
+                hMaxImg = histogramImg[*p];
+            }
+        } else {
+            fprintf(stderr, "Valeur pixel invalide : %f\n", *p);
+        }
+    }
+}
+
+static void display_histogramDiff(void) {
+    double x = g2x_GetXMin(); // Bord gauche de la fenêtre
+    double y = g2x_GetYMin(); // Bord inférieur de la fenêtre
+    double wtdh = (g2x_GetXMax() - g2x_GetXMin()) / 256; // Largeur de chaque barre
+
+    double maxHeight = g2x_GetYMax() - g2x_GetYMin(); // Hauteur maximale dans l'espace G2X
+    double coef = maxHeight / hMaxDiff;                   // Mise à l'échelle basée sur la hauteur disponible
+
+    for (int elt = 0; elt < 256; elt++) {
+        double barHeight = histogramDiff[elt] * coef; // Hauteur proportionnelle dans l'espace G2X
+        g2x_FillRectangle(x, y, x + wtdh, y + barHeight, G2Xr);
+        x += wtdh;
+    }
+}
+
+static void display_histogramImg(void) {
+    double x = g2x_GetXMin(); // Bord gauche de la fenêtre
+    double y = g2x_GetYMin(); // Bord inférieur de la fenêtre
+    double wtdh = (g2x_GetXMax() - g2x_GetXMin()) / 256; // Largeur de chaque barre
+
+    double maxHeight = g2x_GetYMax() - g2x_GetYMin(); // Hauteur maximale dans l'espace G2X
+    double coef = maxHeight / hMaxImg;                   // Mise à l'échelle basée sur la hauteur disponible
+
+    for (int elt = 0; elt < 256; elt++) {
+        double barHeight = histogramImg[elt] * coef; // Hauteur proportionnelle dans l'espace G2X
+        g2x_FillRectangle(x, y, x + wtdh, y + barHeight, G2Xr);
+        x += wtdh;
+    }
+}
 
 /*! fonction d'initialisation !*/
-void init(void)
-{
+void init(void) {
     g2x_PixmapPreload(img);
     int w = img->width, h = img->height;
     difalloc(&dif, w, h); /* Allocation */
@@ -26,23 +106,22 @@ void init(void)
     g2x_PixmapAlloc(&orig, w, h, 1, 255); /* Allocation */
     diftopix(&dif, orig); /* Création */
 
-    create_histo();
+    createDiffImg();
+    createImg();
 }
 
 /* passe la copie en négatif */
-static void self_negate(void)
-{
+static void self_negate(void) {
     for (uchar *p = visu->map; p < visu->end; p++) *p = ~*p;
 }
 
 /*! fonction de contrôle      !*/
-void ctrl(void)
-{
+void ctrl(void) {
     // selection de la fonte : ('n':normal,'l':large,'L':LARGE),('n':normal,'b':bold),('l':left, 'c':center, 'r':right)
     g2x_SetFontAttributes('l', 'b', 'c');
     g2x_CreatePopUp("NEG", self_negate, "négatif sur la copie");
-    g2x_CreateSwitch("O/DIF", &SWAP, "affiche l'original ou la visuelle");
-    g2x_CreateSwitch("afficher l'histogramme",&showHST,"affiche l'histogramme");
+    g2x_CreateSwitch("O/DIF", &SWAP_DIFF, "affiche l'original ou la visuelle");
+    g2x_CreateSwitch("Histogram Show", &SWAP_histogramDiff, "affiche l'histogramDiffgramme");
 }
 
 void evts(void)
@@ -53,39 +132,17 @@ void evts(void)
 /*! fonction de dessin        !*/
 void draw(void)
 {
-    switch (SWAP)
+    switch (SWAP_DIFF)
     {
     case false:
-        if (showHST) {
-            g2x_PixmapRecall(img, true);
-            create_histo();
-            show_histo();
-        }
-        else {
-            g2x_PixmapRecall(img, true);
-        }
+        g2x_PixmapRecall(img, true); /* rappel de l'image originale */
+        display_histogramImg();
         break;
     case true:
-        if (showHST) {
-            g2x_PixmapRecall(visu, true);
-            create_histo();
-            show_histo();
-        }
-        else {
-            g2x_PixmapRecall(visu, true);
-        }
+        g2x_PixmapShow(visu, true); /* affiche la copie de travail */
+        display_histogramDiff();
         break;
     }
-    
-    // switch (showHST) {
-    //     case false: 
-    //         break;
-    //     case true:
-    //         g2x_PixmapRecall(visu, true);
-    //         create_histo();
-    //         show_histo();
-    //         break;
-    // }
 }
 
 /*! fonction de sortie        !*/

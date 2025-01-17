@@ -40,7 +40,7 @@ static void create_histo(void){
    
 }
 /*fonction d'affichage de l'histogramme*/
-static void show_histo(void){
+static void display_histogram(void){
   double x = g2x_GetXMin();  // Bord gauche de la fenêtre
   double y = g2x_GetYMin();  // Bord inférieur de la fenêtre
   double wtdh = (g2x_GetXMax() - g2x_GetXMin()) / 256; // Largeur de chaque barre
@@ -83,7 +83,7 @@ static void draw(void)
   if (showHST){
     g2x_PixmapRecall(img,true);
     create_histo();
-    show_histo();
+    display_histogram();
   }
   else{
     g2x_PixmapRecall(img,true);

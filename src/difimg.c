@@ -13,17 +13,10 @@
 /* l'image elle-même : créée/libérée automatiquement par <g2x> */
 static G2Xpixmap *img = NULL, *copie = NULL, *visu = NULL, *orig = NULL;
 
-/* paramètres d'interaction */
-static bool SWAP = true; /* affichage : false->original  true->copie */
-static int bitmask = 7;  /* nombre de plans de bits affichés         */
-
 /* type "pixel différenciel" */
 typedef signed short dword; /* au moins 2 octets donc short */
 
 static DiffImg dif; // Structure contenant les données différentielles
-
-static int hMax= 0; // Hauteur maximale de l'histogramme
-static int histo [256]={0}; // Tableau de l'histogramme
 
 /*
  * Alloue la mémoire pour une image différentielle (DiffImg)
@@ -113,42 +106,4 @@ extern bool diftovisu(DiffImg *dif, G2Xpixmap *visu)
         d++;
     }
     return true;
-}
-
-void create_histo(void) {
-    if (!visu || !visu->map || !visu->end) {
-        fprintf(stderr, "Erreur : données de l'image non valides\n");
-        return;
-    }
-
-    memset(histo, 0, sizeof(histo)); // Réinitialisation
-    hMax = 0;
-
-    for (uchar* p = visu->map; p < visu->end; p++) { // Utilisation de visu->map
-        if (*p >= 0 && *p < 256) {
-            histo[*p]++;
-            if (histo[*p] > hMax) {
-                hMax = histo[*p];
-            }
-        }
-    }
-}
-
-void show_histo(void) {
-    if (!visu || hMax == 0) {
-        fprintf(stderr, "Erreur : données de l'histogramme non valides\n");
-        return;
-    }
-
-    double x = g2x_GetXMin();
-    double y = g2x_GetYMin();
-    double wtdh = (g2x_GetXMax() - g2x_GetXMin()) / 256;
-    double maxHeight = g2x_GetYMax() - g2x_GetYMin();
-    double coef = maxHeight / hMax;
-
-    for (int elt = 0; elt < 256; elt++) {
-        double barHeight = histo[elt] * coef;
-        g2x_FillRectangle(x, y, x + wtdh, y + barHeight, G2Xr);
-        x += wtdh;
-    }
 }
