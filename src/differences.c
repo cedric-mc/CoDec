@@ -4,6 +4,8 @@
 
 #define MAGIC_NUMBER 0xD1FF // Identifiant unique pour le format DIFF
 
+#define BUFFER_FACTOR 1.5 // Facteur pour la taille du buffer compressé
+
 /* l'image elle-même : créée/libérée automatiquement par <g2x> */
 static G2Xpixmap *img = NULL, *copie = NULL, *visu = NULL, *orig = NULL;
 
@@ -102,6 +104,14 @@ extern bool diftovisu(DiffImg *dif, G2Xpixmap *visu)
     return true;
 }
 
+/**
+ * Écrit un entier non signé de 2 octets (big-endian) dans un fichier
+ */
+void write_uint16(FILE *file, uint16_t value) {
+    fputc((value >> 8) & 0xFF, file); // Octet de poids fort
+    fputc(value & 0xFF, file);        // Octet de poids faible
+}
+
 /*
  * Convertit une image normale en image différentielle
  * Stocke la première valeur brute puis calcule les différences entre pixels successifs.
@@ -131,28 +141,46 @@ bool pixtodif_encode(G2Xpixmap *pix, DiffImg *dif)
     }
     dif->difmax = max;
 
-    // --- ENCODAGE DES DIFFÉRENCES ---
-    unsigned char *encoded_data = (unsigned char *)malloc(N * sizeof(unsigned char) * 4); // Allocation mémoire pour le résultat
-    if (!encoded_data) {
-        fprintf(stderr, "Erreur d'allocation mémoire pour l'encodage.\n");
+    // --- ALLOCATION DU BUFFER ---
+    int buffer_size = (int)(BUFFER_FACTOR * N); 
+    uchar buffer[buffer_size]; // Allocation statique du buffer
+
+    // --- ENCODAGE DANS LE BUFFER ---
+    int bits_used = encode_differences(buffer, (int*)dif->map, N);
+
+    // --- OUVERTURE DU FICHIER .dif ---
+    FILE *file = fopen("./DIFF/truc.dif", "wb");
+    if (!file) {
+        fprintf(stderr, "Erreur d'ouverture du fichier.\n");
         return false;
     }
 
-    int bits_used = encode_differences(encoded_data, (int*)dif->map, N); // Encodage
+    // --- ÉCRITURE DANS LE FICHIER ---
 
-    printf("Encodage terminé. %d bits utilisés.\n", bits_used);
+    // --- EN-TÊTE ---
+    // Magic Number
+    write_uint16(file, 0xD1FF);
 
-    // (Optionnel) Écriture des données encodées dans un fichier
-    FILE *file = fopen("encoded_diff.bin", "wb");
-    if (file) {
-        fwrite(encoded_data, 1, (bits_used + 7) / 8, file);
-        fclose(file);
-        printf("Données encodées enregistrées dans 'encoded_diff.bin'.\n");
-    } else {
-        fprintf(stderr, "Erreur lors de l'écriture du fichier.\n");
-    }
+    // Taille de l'image (Largeur, Hauteur)
+    write_uint16(file, (uint16_t)pix->width);
+    write_uint16(file, (uint16_t)pix->height);
 
-    free(encoded_data); // Libération de la mémoire
+    // Quantificateur : 1 octet pour le nombre de niveaux, puis 4 octets pour les bits
+    fputc(0x04, file); // Toujours 4 niveaux
+    fputc(0x01, file);
+    fputc(0x02, file);
+    fputc(0x04, file);
+    fputc(0x08, file);
+    // --- FIN DE L'EN-TÊTE ---
+
+    // Premier pixel de l'image (first)
+    fputc(dif->first, file);
+
+    // --- ÉCRITURE DES DONNÉES COMPRESSÉES ---
+    fwrite(buffer, 1, (bits_used + 7) / 8, file);
+
+    fclose(file);
+    printf("Encodage terminé. %d bits écrits dans './DIFF/truc.dif'\n", bits_used);
 
     return true;
 }
