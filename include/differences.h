@@ -5,21 +5,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <g2x.h>
-
-/* types publics */
-typedef signed short dword;
-typedef struct {
-    int width, height;
-    dword *map, *end;
-    uchar first;
-    dword difmax;
-} DiffImg; // Structure contenant les données différentielles
-
-typedef struct {
-    unsigned short width;
-    unsigned short height;
-    unsigned char first; // Premier pixel brut
-} ImgDif; // Structure contenant les données de l'image différentielle
+#include <difimg.h>
 
 // Définition de la structure BitStream
 typedef struct
@@ -28,12 +14,6 @@ typedef struct
     size_t cap;         // Nombre de bits disponibles dans l'octet courant
 } BitStream;
 
-/* fonctions publiques */
-bool difalloc(DiffImg *dif, int width, int height);
-bool diffree(DiffImg *dif);
-bool diftopix(DiffImg *dif, G2Xpixmap *pix);
-bool pixtodif(G2Xpixmap *pix, DiffImg *dif);
-bool diftovisu(DiffImg *dif, G2Xpixmap *visu);
 
 bool pixtodif_encode(G2Xpixmap *pix, DiffImg *dif);
 void push_bits(BitStream *curr, uchar src, size_t size);

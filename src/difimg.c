@@ -9,6 +9,7 @@
 #include <string.h>
 
 #define MAGIC_NUMBER 0xD1FF // Identifiant unique pour le format DIFF
+#define BUFFER_FACTOR 1.5 // Facteur pour la taille du buffer compressé
 
 /* l'image elle-même : créée/libérée automatiquement par <g2x> */
 static G2Xpixmap *img = NULL, *copie = NULL, *visu = NULL, *orig = NULL;
@@ -105,5 +106,78 @@ extern bool diftovisu(DiffImg *dif, G2Xpixmap *visu)
         p++;
         d++;
     }
+    return true;
+}
+
+/*
+ * Convertit une image normale en image différentielle
+ * Stocke la première valeur brute puis calcule les différences entre pixels successifs.
+ */
+bool pixtodif_encode(G2Xpixmap *pix, DiffImg *dif)
+{
+    if (pix == NULL || dif == NULL) return false; /* simple sécurité */
+
+    dif->first = *pix->map; /* 1er pixel, traité à part (non différentiel) */
+    uchar *p = pix->map + 1; // positionnement des pointeurs pour les pixels
+    dword *d = dif->map + 1; /* positionnement des pointeurs */
+    dword max = 0;
+
+    int N = (pix->end - pix->map); // Nombre de différences à encoder
+
+    // printf("Premier pixel : %d\n", dif->first);
+    while (p < pix->end)
+    {
+        *d = *p - *(p - 1);
+        if (abs(*d) > max) max = abs(*d);
+
+        // Affichage de la valeur différentielle
+        // printf("Diff[%ld] = %d\n", d - dif->map, *d);
+
+        p++;
+        d++;
+    }
+    dif->difmax = max;
+
+    // // --- ALLOCATION DU BUFFER ---
+    // int buffer_size = (int)(BUFFER_FACTOR * N); 
+    // uchar buffer[buffer_size]; // Allocation statique du buffer
+
+    // // --- ENCODAGE DANS LE BUFFER ---
+    // int bits_used = encode_differences(buffer, (int*)dif->map, N);
+
+    // // --- OUVERTURE DU FICHIER .dif ---
+    // FILE *file = fopen("./DIFF/truc.dif", "wb");
+    // if (!file) {
+    //     fprintf(stderr, "Erreur d'ouverture du fichier.\n");
+    //     return false;
+    // }
+
+    // // --- ÉCRITURE DANS LE FICHIER ---
+
+    // // --- EN-TÊTE ---
+    // // Magic Number
+    // write_uint16(file, 0xD1FF);
+
+    // // Taille de l'image (Largeur, Hauteur)
+    // write_uint16(file, (uint16_t)pix->width);
+    // write_uint16(file, (uint16_t)pix->height);
+
+    // // Quantificateur : 1 octet pour le nombre de niveaux, puis 4 octets pour les bits
+    // fputc(0x04, file); // Toujours 4 niveaux
+    // fputc(0x01, file);
+    // fputc(0x02, file);
+    // fputc(0x04, file);
+    // fputc(0x08, file);
+    // // --- FIN DE L'EN-TÊTE ---
+
+    // // Premier pixel de l'image (first)
+    // fputc(dif->first, file);
+
+    // // --- ÉCRITURE DES DONNÉES COMPRESSÉES ---
+    // fwrite(buffer, 1, (bits_used + 7) / 8, file);
+
+    // fclose(file);
+    // printf("Encodage terminé. %d bits écrits dans './DIFF/truc.dif'\n", bits_used);
+
     return true;
 }

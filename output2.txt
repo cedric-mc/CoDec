@@ -1,2 +1,0 @@
-📂 Fichier de sortie : DIFF/albert.dif
-Premier pixel : 0

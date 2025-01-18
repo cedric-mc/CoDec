@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <g2x.h>
+#include <difimg.h>
 #include <differences.h>
 
 #define BUFFER_FACTOR 1.5 // Facteur pour la taille du buffer compressé

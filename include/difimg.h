@@ -30,6 +30,6 @@ bool diffree(DiffImg *dif);
 bool diftopix(DiffImg *dif, G2Xpixmap *pix);
 bool pixtodif(G2Xpixmap *pix, DiffImg *dif);
 bool diftovisu(DiffImg *dif, G2Xpixmap *visu);
-
+bool pixtodif_encode(G2Xpixmap *pix, DiffImg *dif);
 
 #endif

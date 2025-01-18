@@ -1,7 +1,7 @@
 .vscode/
 .idea/
+*.dif
 *.o
 main
-differences.o
 pgmtodif
-DIFF/*.dif
+diftopgm
