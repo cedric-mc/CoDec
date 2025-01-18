@@ -109,6 +109,7 @@ extern bool diftovisu(DiffImg *dif, G2Xpixmap *visu)
 bool pixtodif_encode(G2Xpixmap *pix, DiffImg *dif)
 {
     if (pix == NULL || dif == NULL) return false; /* simple sécurité */
+
     dif->first = *pix->map; /* 1er pixel, traité à part (non différentiel) */
     uchar *p = pix->map + 1; // positionnement des pointeurs pour les pixels
     dword *d = dif->map + 1; /* positionnement des pointeurs */
@@ -131,7 +132,7 @@ bool pixtodif_encode(G2Xpixmap *pix, DiffImg *dif)
     dif->difmax = max;
 
     // --- ENCODAGE DES DIFFÉRENCES ---
-    unsigned char *encoded_data = (unsigned char *)malloc(N * sizeof(unsigned char) * 2); // Allocation mémoire pour le résultat
+    unsigned char *encoded_data = (unsigned char *)malloc(N * sizeof(unsigned char) * 4); // Allocation mémoire pour le résultat
     if (!encoded_data) {
         fprintf(stderr, "Erreur d'allocation mémoire pour l'encodage.\n");
         return false;
@@ -151,7 +152,7 @@ bool pixtodif_encode(G2Xpixmap *pix, DiffImg *dif)
         fprintf(stderr, "Erreur lors de l'écriture du fichier.\n");
     }
 
-    free(encoded_data); // Libération de la mémoire allouée pour l'encodage
+    free(encoded_data); // Libération de la mémoire
 
     return true;
 }
