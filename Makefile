@@ -23,6 +23,7 @@ SRC = src/
 # Liste des exécutables à générer
 # ALL = main pgmtodif
 ALL = pgmtodif
+# ALL = main
 
 # Règle spécifique pour l'exécutable 'main'
 # main: difimg.o main.o
