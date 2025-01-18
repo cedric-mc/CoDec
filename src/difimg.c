@@ -6,7 +6,6 @@
 
 #include <g2x.h>
 #include <difimg.h>
-#include <differences.h>
 #include <string.h>
 
 #define MAGIC_NUMBER 0xD1FF // Identifiant unique pour le format DIFF
@@ -106,59 +105,5 @@ extern bool diftovisu(DiffImg *dif, G2Xpixmap *visu)
         p++;
         d++;
     }
-    return true;
-}
-
-/*
- * Convertit une image normale en image différentielle
- * Stocke la première valeur brute puis calcule les différences entre pixels successifs.
- */
-bool pixtodif_encode(G2Xpixmap *pix, DiffImg *dif)
-{
-    if (pix == NULL || dif == NULL) return false; /* simple sécurité */
-    dif->first = *pix->map; /* 1er pixel, traité à part (non différentiel) */
-    uchar *p = pix->map + 1; // positionnement des pointeurs pour les pixels
-    dword *d = dif->map + 1; /* positionnement des pointeurs */
-    dword max = 0;
-
-    int N = (pix->end - pix->map); // Nombre de différences à encoder
-
-    // printf("Premier pixel : %d\n", dif->first);
-    while (p < pix->end)
-    {
-        *d = *p - *(p - 1);
-        if (abs(*d) > max) max = abs(*d);
-
-        // Affichage de la valeur différentielle
-        // printf("Diff[%ld] = %d\n", d - dif->map, *d);
-
-        p++;
-        d++;
-    }
-    dif->difmax = max;
-
-    // --- ENCODAGE DES DIFFÉRENCES ---
-    unsigned char *encoded_data = (unsigned char *)malloc(N * sizeof(unsigned char) * 2); // Allocation mémoire pour le résultat
-    if (!encoded_data) {
-        fprintf(stderr, "Erreur d'allocation mémoire pour l'encodage.\n");
-        return false;
-    }
-
-    int bits_used = encode_differences(encoded_data, (int*)dif->map, N); // Encodage
-
-    printf("Encodage terminé. %d bits utilisés.\n", bits_used);
-
-    // (Optionnel) Écriture des données encodées dans un fichier
-    FILE *file = fopen("encoded_diff.bin", "wb");
-    if (file) {
-        fwrite(encoded_data, 1, (bits_used + 7) / 8, file);
-        fclose(file);
-        printf("Données encodées enregistrées dans 'encoded_diff.bin'.\n");
-    } else {
-        fprintf(stderr, "Erreur lors de l'écriture du fichier.\n");
-    }
-
-    free(encoded_data); // Libération de la mémoire allouée pour l'encodage
-
     return true;
 }

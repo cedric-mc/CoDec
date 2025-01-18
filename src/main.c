@@ -20,6 +20,12 @@ static int hMaxImg = 0; // Valeur maximale de l'histogramme
 static int histogramDiff [256] = {0}; // Tableau de l'histogramme de l'image différentielle
 static int histogramImg [256] = {0}; // Tableau de l'histogramme de l'image originale
 
+// Structure pour stocker l'histogramme
+// typedef struct {
+//     int *hMax; // Valeur maximale de l'histogramme
+//     int *histogram[256]; // Tableau de l'histogramme
+// } Histogram;
+
 static void createDiffImg(void) {
     if (!dif.map || !dif.end) {
         fprintf(stderr, "Erreur : données de l'image non valides\n");
@@ -66,6 +72,9 @@ static void createImg(void) {
     }
 }
 
+/*
+* Affiche l'histogramme de l'image
+*/
 static void display_histogram(int hMax, int histogram[256]) {
     double x = g2x_GetXMin(); // Bord gauche de la fenêtre
     double y = g2x_GetYMin(); // Bord inférieur de la fenêtre
@@ -76,36 +85,6 @@ static void display_histogram(int hMax, int histogram[256]) {
 
     for (int elt = 0; elt < 256; elt++) {
         double barHeight = histogram[elt] * coef; // Hauteur proportionnelle dans l'espace G2X
-        g2x_FillRectangle(x, y, x + wtdh, y + barHeight, G2Xr);
-        x += wtdh;
-    }
-}
-
-static void display_histogramDiff(void) {
-    double x = g2x_GetXMin(); // Bord gauche de la fenêtre
-    double y = g2x_GetYMin(); // Bord inférieur de la fenêtre
-    double wtdh = (g2x_GetXMax() - g2x_GetXMin()) / 256; // Largeur de chaque barre
-
-    double maxHeight = g2x_GetYMax() - g2x_GetYMin(); // Hauteur maximale dans l'espace G2X
-    double coef = maxHeight / hMaxDiff;                   // Mise à l'échelle basée sur la hauteur disponible
-
-    for (int elt = 0; elt < 256; elt++) {
-        double barHeight = histogramDiff[elt] * coef; // Hauteur proportionnelle dans l'espace G2X
-        g2x_FillRectangle(x, y, x + wtdh, y + barHeight, G2Xr);
-        x += wtdh;
-    }
-}
-
-static void display_histogramImg(void) {
-    double x = g2x_GetXMin(); // Bord gauche de la fenêtre
-    double y = g2x_GetYMin(); // Bord inférieur de la fenêtre
-    double wtdh = (g2x_GetXMax() - g2x_GetXMin()) / 256; // Largeur de chaque barre
-
-    double maxHeight = g2x_GetYMax() - g2x_GetYMin(); // Hauteur maximale dans l'espace G2X
-    double coef = maxHeight / hMaxImg;                   // Mise à l'échelle basée sur la hauteur disponible
-
-    for (int elt = 0; elt < 256; elt++) {
-        double barHeight = histogramImg[elt] * coef; // Hauteur proportionnelle dans l'espace G2X
         g2x_FillRectangle(x, y, x + wtdh, y + barHeight, G2Xr);
         x += wtdh;
     }
@@ -155,14 +134,13 @@ void evts(void)
 }
 
 /*! fonction de dessin        !*/
-void draw(void)
-{
+void draw(void) {
     if (SWAP_DIFF && SWAP_HISTOGRAM_DIFF) {
         g2x_PixmapShow(visu, true);
-        display_histogramDiff();
+        display_histogram(hMaxDiff, histogramDiff);
     } else if (!SWAP_DIFF && SWAP_HISTOGRAM_IMG) {
         g2x_PixmapRecall(img, true);
-        display_histogramImg();
+        display_histogram(hMaxImg, histogramImg);
     } else if (SWAP_DIFF && !SWAP_HISTOGRAM_DIFF) {
         g2x_PixmapShow(visu, true);
     } else if (!SWAP_DIFF && !SWAP_HISTOGRAM_IMG) {
