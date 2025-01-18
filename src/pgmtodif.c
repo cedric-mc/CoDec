@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <g2x.h>
 #include <differences.h>
+#include <difimg.h>
+#include <histogram.h>
 
 #define BUFFER_FACTOR 1.5 // Facteur pour la taille du buffer compressé
 
@@ -18,10 +20,8 @@ static bool SWAP_DIFF = false; /* affichage : false->original  true->copie */
 static bool SWAP_HISTOGRAM_DIFF = false; // Flag pour afficher l'histogramme de l'image différentielle
 static bool SWAP_HISTOGRAM_IMG = false; // Flag pour afficher l'histogramme de l'image originale
 
-static int hMaxDiff= 0; // Valeur maximale de l'histogramme
-static int hMaxImg = 0; // Valeur maximale de l'histogramme
-static int histogramDiff [256] = {0}; // Tableau de l'histogramme de l'image différentielle
-static int histogramImg [256] = {0}; // Tableau de l'histogramme de l'image originale
+Histogram histogramDiff;
+Histogram histogramImg;
 
 static char *dif_filename[256]; // Stocke le nom du fichier .dif 📂
 
@@ -70,67 +70,6 @@ static void save_dif_file(const char *filename, G2Xpixmap *pix, DiffImg *dif) {
     printf("Encodage terminé. %d bits écrits dans '%s'\n", bits_used, filename);
 }
 
-static void createDiffImg(void) {
-    if (!dif.map || !dif.end) {
-        fprintf(stderr, "Erreur : données de l'image non valides\n");
-        return;
-    }
-
-    if (dif.width <= 0 || dif.height <= 0) {
-        fprintf(stderr, "Erreur : dimensions de l'image incorrectes [%dx%d]\n", dif.width, dif.height);
-        return;
-    }
-
-    for (uchar *p = dif.map; p < dif.end; p++) {
-        if (*p >= 0 && *p < 256) {
-            histogramDiff[*p]++;
-            if (hMaxDiff < histogramDiff[*p]) {
-                hMaxDiff = histogramDiff[*p];
-            }
-        } else {
-            fprintf(stderr, "Valeur pixel invalide : %f\n", *p);
-        }
-    }
-}
-
-static void createImg(void) {
-    if (!img || !img->map || !img->end) {
-        fprintf(stderr, "Erreur : données de l'image non valides\n");
-        return;
-    }
-
-    if (img->width <= 0 || img->height <= 0) {
-        fprintf(stderr, "Erreur : dimensions de l'image incorrectes [%fx%f]\n", img->width, img->height);
-        return;
-    }
-
-    for (uchar *p = img->map; p < img->end; p++) {
-        if (*p >= 0 && *p < 256) {
-            histogramImg[*p]++;
-            if (hMaxImg < histogramImg[*p]) {
-                hMaxImg = histogramImg[*p];
-            }
-        } else {
-            fprintf(stderr, "Valeur pixel invalide : %f\n", *p);
-        }
-    }
-}
-
-static void display_histogram(int hMax, int histogram[256]) {
-    double x = g2x_GetXMin(); // Bord gauche de la fenêtre
-    double y = g2x_GetYMin(); // Bord inférieur de la fenêtre
-    double wtdh = (g2x_GetXMax() - g2x_GetXMin()) / 256; // Largeur de chaque barre
-
-    double maxHeight = g2x_GetYMax() - g2x_GetYMin(); // Hauteur maximale dans l'espace G2X
-    double coef = maxHeight / hMax;                   // Mise à l'échelle basée sur la hauteur disponible
-
-    for (int elt = 0; elt < 256; elt++) {
-        double barHeight = histogram[elt] * coef; // Hauteur proportionnelle dans l'espace G2X
-        g2x_FillRectangle(x, y, x + wtdh, y + barHeight, G2Xr);
-        x += wtdh;
-    }
-}
-
 /*! fonction d'initialisation !*/
 void init(void) {
     g2x_PixmapPreload(img);
@@ -145,8 +84,8 @@ void init(void) {
     g2x_PixmapAlloc(&orig, w, h, 1, 255);
     diftopix(&dif, orig);
 
-    createDiffImg();
-    createImg();
+    createDiffImg(&histogramDiff, &dif);
+    createImg(&histogramImg, img);
 }
 
 static void compress(void) {
@@ -186,10 +125,10 @@ void evts(void)
 void draw(void) {
     if (SWAP_DIFF && SWAP_HISTOGRAM_DIFF) {
         g2x_PixmapShow(visu, true);
-        display_histogram(hMaxDiff, histogramDiff);
+        display_histogram(&histogramDiff);
     } else if (!SWAP_DIFF && SWAP_HISTOGRAM_IMG) {
         g2x_PixmapRecall(img, true);
-        display_histogram(hMaxImg, histogramImg);
+        display_histogram(&histogramImg);
     } else if (SWAP_DIFF && !SWAP_HISTOGRAM_DIFF) {
         g2x_PixmapShow(visu, true);
     } else if (!SWAP_DIFF && !SWAP_HISTOGRAM_IMG) {

@@ -21,8 +21,8 @@ LFLAGS = $(libG2X)$(EXT)
 SRC = src/
 
 # Liste des exécutables à générer
-# ALL = main pgmtodif diftopgm
-ALL = pgmtodif diftopgm
+ALL = main pgmtodif diftopgm
+# ALL = pgmtodif diftopgm
 # ALL = main
 
 # Règle spécifique pour l'exécutable 'main'
@@ -30,11 +30,11 @@ main: difimg.o histogram.o main.o
 	$(CC) $^ $(LFLAGS) -o $@
 
 # Règle spécifique pour l'exécutable 'pgmtodif'
-pgmtodif: difimg.o differences.o pgmtodif.o
+pgmtodif: difimg.o histogram.o differences.o pgmtodif.o
 	$(CC) $^ $(LFLAGS) -o $@
 
 # Règle spécifique pour l'exécutable 'diftopgm'
-diftopgm: difimg.o differences.o diftopgm.o
+diftopgm: difimg.o histogram.o differences.o diftopgm.o
 	$(CC) $^ $(LFLAGS) -o $@
 
 # Règle générique pour créer un fichier .o à partir d'un fichier .c

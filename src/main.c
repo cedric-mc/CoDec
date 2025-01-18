@@ -16,17 +16,6 @@ static bool SWAP_DIFF = false; /* affichage : false->original  true->copie */
 static bool SWAP_HISTOGRAM_DIFF = false; // Flag pour afficher l'histogramme de l'image différentielle
 static bool SWAP_HISTOGRAM_IMG = false; // Flag pour afficher l'histogramme de l'image originale
 
-// static int hMaxDiff= 0; // Valeur maximale de l'histogramme
-// static int hMaxImg = 0; // Valeur maximale de l'histogramme
-// static int histogramDiff [256] = {0}; // Tableau de l'histogramme de l'image différentielle
-// static int histogramImg [256] = {0}; // Tableau de l'histogramme de l'image originale
-
-// Structure pour stocker l'histogramme
-// typedef struct {
-//     int hMax; // Valeur maximale de l'histogramme
-//     int histogram[256]; // Tableau de l'histogramme
-// } Histogram;
-
 Histogram histogramDiff;
 Histogram histogramImg;
 
