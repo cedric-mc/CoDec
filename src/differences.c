@@ -2,8 +2,6 @@
 #include <differences.h>
 #include <string.h>
 
-#define MAGIC_NUMBER 0xD1FF // Identifiant unique pour le format DIFF
-
 #define BUFFER_FACTOR 1.5 // Facteur pour la taille du buffer compressé
 
 /* l'image elle-même : créée/libérée automatiquement par <g2x> */

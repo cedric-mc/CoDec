@@ -2,7 +2,7 @@
 #include <g2x.h>
 #include <differences.h>
 
-#define MAGIC_NUMBER 0xD1FF // Identifiant unique pour le format DIFF
+#define BUFFER_FACTOR 1.5 // Facteur pour la taille du buffer compressé
 
 /* variables globales */
 /* récupère et segmente le chemin vers l'image : pathname/rootname.extname */
@@ -14,117 +14,121 @@ static G2Xpixmap *visu = NULL, *orig = NULL;
 DiffImg dif = {0};
 
 /* paramètres d'interaction */
-static bool SWAP = false; /* affichage : false->original  true->copie */
-static bool SAVE_DIF = false; // Flag pour déclencher la sauvegarde de l'image compressée
+static bool SWAP_DIFF = false; /* affichage : false->original  true->copie */
+static bool SWAP_HISTOGRAM_DIFF = false; // Flag pour afficher l'histogramme de l'image différentielle
+static bool SWAP_HISTOGRAM_IMG = false; // Flag pour afficher l'histogramme de l'image originale
 
-static char *dif_filename[256]; // Stocke le nom du fichier .dif
+static int hMaxDiff= 0; // Valeur maximale de l'histogramme
+static int hMaxImg = 0; // Valeur maximale de l'histogramme
+static int histogramDiff [256] = {0}; // Tableau de l'histogramme de l'image différentielle
+static int histogramImg [256] = {0}; // Tableau de l'histogramme de l'image originale
 
-void generate_dif_filename(const char *pgm_filename) {
-    // Extraction du nom de fichier sans extension
-    const char *basename = strrchr(pgm_filename, '/'); // Trouve le dernier '/'
-    if (basename) {
-        basename++; // Passe après le '/'
-    } else {
-        basename = pgm_filename; // Aucun '/' trouvé, utiliser directement le nom
+static char *dif_filename[256]; // Stocke le nom du fichier .dif 📂
+
+static void save_dif_file(const char *filename, G2Xpixmap *pix, DiffImg *dif) {
+    int N = (pix->end - pix->map); // Nombre de différences à encoder
+
+    // --- ALLOCATION DU BUFFER ---
+    int buffer_size = (int)(BUFFER_FACTOR * N); 
+    uchar buffer[buffer_size]; // Allocation statique du buffer
+
+    // --- ENCODAGE DANS LE BUFFER ---
+    int bits_used = encode_differences(buffer, (int*)dif->map, N);
+
+    // --- OUVERTURE DU FICHIER .dif ---
+    FILE *file = fopen(filename, "wb");
+    if (!file) {
+        fprintf(stderr, "Erreur d'ouverture du fichier.\n");
+        return false;
     }
 
-    // Copie du nom de base sans extension
-    strncpy(dif_filename, "DIFF/", sizeof(dif_filename) - 1);
-    strncat(dif_filename, basename, sizeof(dif_filename) - strlen(dif_filename) - 1);
+    // --- ÉCRITURE DANS LE FICHIER ---
 
-    // Remplacement de ".pgm" par ".dif"
-    char *ext = strrchr(dif_filename, '.');
-    if (ext) {
-        strcpy(ext, ".dif"); // Remplace l'extension
-    } else {
-        strncat(dif_filename, ".dif", sizeof(dif_filename) - strlen(dif_filename) - 1);
-    }
+    // --- EN-TÊTE ---
+    // Magic Number
+    write_uint16(file, 0xD1FF);
 
-    printf("📂 Fichier de sortie : %s\n", dif_filename);
+    // Taille de l'image (Largeur, Hauteur)
+    write_uint16(file, (uint16_t)pix->width);
+    write_uint16(file, (uint16_t)pix->height);
+
+    // Quantificateur : 1 octet pour le nombre de niveaux, puis 4 octets pour les bits
+    fputc(0x04, file); // Toujours 4 niveaux
+    fputc(0x01, file);
+    fputc(0x02, file);
+    fputc(0x04, file);
+    fputc(0x08, file);
+    // --- FIN DE L'EN-TÊTE ---
+
+    // Premier pixel de l'image (first)
+    fputc(dif->first, file);
+
+    // --- ÉCRITURE DES DONNÉES COMPRESSÉES ---
+    fwrite(buffer, 1, (bits_used + 7) / 8, file);
+
+    fclose(file);
+    printf("Encodage terminé. %d bits écrits dans '%s'\n", bits_used, filename);
 }
 
-/*
- * Convertit une image normalisée PGM en image différentielle DIFF
- * Écrit un fichier .dif avec les différences entre pixels successifs.
- */
-int pgmtodif(const char *pgm_filename, const char *diff_filename) {
-    FILE *pgm_file = fopen(pgm_filename, "rb");
-    if (!pgm_file) {
-        perror("Erreur lors de l'ouverture du fichier PGM");
-        return -1;
+static void createDiffImg(void) {
+    if (!dif.map || !dif.end) {
+        fprintf(stderr, "Erreur : données de l'image non valides\n");
+        return;
     }
 
-    // 📌 Lecture de l'en-tête du fichier PGM
-    char header[3];
-    int width, height, maxval;
-    fscanf(pgm_file, "%s\n%d %d\n%d\n", header, &width, &height, &maxval);
-
-    if (strcmp(header, "P5") != 0 || maxval != 255) {
-        printf("Format PGM non valide ou non supporté.\n");
-        fclose(pgm_file);
-        return -1;
+    if (dif.width <= 0 || dif.height <= 0) {
+        fprintf(stderr, "Erreur : dimensions de l'image incorrectes [%dx%d]\n", dif.width, dif.height);
+        return;
     }
 
-    // 📌 Lecture des pixels
-    unsigned char *pixels = malloc(width * height);
-    if (!pixels) {
-        perror("Erreur d'allocation mémoire pour pixels");
-        fclose(pgm_file);
-        return -1;
+    for (uchar *p = dif.map; p < dif.end; p++) {
+        if (*p >= 0 && *p < 256) {
+            histogramDiff[*p]++;
+            if (hMaxDiff < histogramDiff[*p]) {
+                hMaxDiff = histogramDiff[*p];
+            }
+        } else {
+            fprintf(stderr, "Valeur pixel invalide : %f\n", *p);
+        }
     }
-    fread(pixels, sizeof(unsigned char), width * height, pgm_file);
-    fclose(pgm_file);
+}
 
-    // 📌 Calcul des différences différentielles
-    int *differences = malloc((width * height) * sizeof(int));
-    if (!differences) {
-        perror("Erreur d'allocation mémoire pour differences");
-        free(pixels);
-        return -1;
-    }
-    differences[0] = pixels[0]; // Premier pixel stocké directement
-    for (int i = 1; i < width * height; i++) {
-        differences[i] = (int)pixels[i] - (int)pixels[i - 1];
-    }
-    free(pixels);
-
-    // 📌 Ouverture du fichier DIFF
-    FILE *diff_file = fopen(diff_filename, "wb");
-    if (!diff_file) {
-        perror("Erreur lors de l'ouverture du fichier DIFF");
-        free(differences);
-        return -1;
+static void createImg(void) {
+    if (!img || !img->map || !img->end) {
+        fprintf(stderr, "Erreur : données de l'image non valides\n");
+        return;
     }
 
-    // 📌 Écriture de l'en-tête
-    unsigned short magic = MAGIC_NUMBER;
-    fwrite(&magic, sizeof(unsigned short), 1, diff_file);
-    fwrite(&width, sizeof(unsigned short), 1, diff_file);
-    fwrite(&height, sizeof(unsigned short), 1, diff_file);
-
-    // 📌 Allocation du buffer compressé
-    size_t buffer_size = 1.5 * width * height;
-    unsigned char *compressed_buffer = malloc(buffer_size);
-    if (!compressed_buffer) {
-        perror("Erreur d'allocation mémoire pour buffer compressé");
-        fclose(diff_file);
-        free(differences);
-        return -1;
+    if (img->width <= 0 || img->height <= 0) {
+        fprintf(stderr, "Erreur : dimensions de l'image incorrectes [%fx%f]\n", img->width, img->height);
+        return;
     }
 
-    // 📌 Encodage des différences
-    int compressed_bits = encode_differences(compressed_buffer, differences, width * height);
-    int compressed_bytes = (compressed_bits + 7) / 8; // Conversion en octets
+    for (uchar *p = img->map; p < img->end; p++) {
+        if (*p >= 0 && *p < 256) {
+            histogramImg[*p]++;
+            if (hMaxImg < histogramImg[*p]) {
+                hMaxImg = histogramImg[*p];
+            }
+        } else {
+            fprintf(stderr, "Valeur pixel invalide : %f\n", *p);
+        }
+    }
+}
 
-    // 📌 Écriture des données compressées
-    fwrite(compressed_buffer, sizeof(unsigned char), compressed_bytes, diff_file);
+static void display_histogram(int hMax, int histogram[256]) {
+    double x = g2x_GetXMin(); // Bord gauche de la fenêtre
+    double y = g2x_GetYMin(); // Bord inférieur de la fenêtre
+    double wtdh = (g2x_GetXMax() - g2x_GetXMin()) / 256; // Largeur de chaque barre
 
-    // 📌 Nettoyage et fermeture des fichiers
-    fclose(diff_file);
-    free(differences);
-    free(compressed_buffer);
+    double maxHeight = g2x_GetYMax() - g2x_GetYMin(); // Hauteur maximale dans l'espace G2X
+    double coef = maxHeight / hMax;                   // Mise à l'échelle basée sur la hauteur disponible
 
-    return 0;
+    for (int elt = 0; elt < 256; elt++) {
+        double barHeight = histogram[elt] * coef; // Hauteur proportionnelle dans l'espace G2X
+        g2x_FillRectangle(x, y, x + wtdh, y + barHeight, G2Xr);
+        x += wtdh;
+    }
 }
 
 /*! fonction d'initialisation !*/
@@ -140,17 +144,36 @@ void init(void) {
 
     g2x_PixmapAlloc(&orig, w, h, 1, 255);
     diftopix(&dif, orig);
+
+    createDiffImg();
+    createImg();
 }
 
 static void compress(void) {
     save_dif_file(dif_filename, img, &dif);
 }
 
+/* passe la copie en négatif */
+static void self_negate(void) {
+    for (uchar *p = visu->map; p < visu->end; p++) *p = ~*p;
+}
+
+static void self_histogram(void) {
+    // Selon si l'image est l'originale ou la différentielle, on affiche l'histogramme correspondant
+    if (SWAP_DIFF) {
+        SWAP_HISTOGRAM_DIFF = !SWAP_HISTOGRAM_DIFF;
+    } else {
+        SWAP_HISTOGRAM_IMG = !SWAP_HISTOGRAM_IMG;
+    }
+}
+
 /*! fonction de contrôle      !*/
 void ctrl(void) {
     // selection de la fonte : ('n':normal,'l':large,'L':LARGE),('n':normal,'b':bold),('l':left, 'c':center, 'r':right)
     g2x_SetFontAttributes('l', 'b', 'c');
-    g2x_CreateSwitch("Afficher DIFF", &SWAP, "Basculer entre l'original et l'image différentielle");
+    g2x_CreatePopUp("NEG", self_negate, "négatif sur la copie");
+    g2x_CreateSwitch("O/DIF", &SWAP_DIFF, "affiche l'original ou la visuelle");
+    g2x_CreatePopUp("Histogram Show", self_histogram, "affiche l'histogramDiffgramme");
     g2x_CreatePopUp("Sauver .dif", compress, "Sauvegarder l'image compressée");
 }
 
@@ -161,15 +184,18 @@ void evts(void)
 
 /*! fonction de dessin        !*/
 void draw(void) {
-    switch (SWAP) {
-    case false:
-        g2x_PixmapRecall(img, true); /* rappel de l'image originale */
-        g2x_StaticPrint(10, 10, G2Xr, "Image originale");
-        break;
-    case true:
-        g2x_PixmapShow(visu, true); /* affiche la copie de travail */
-        g2x_StaticPrint(10, 10, G2Xr, "Image différentielle");
-        break;
+    if (SWAP_DIFF && SWAP_HISTOGRAM_DIFF) {
+        g2x_PixmapShow(visu, true);
+        display_histogram(hMaxDiff, histogramDiff);
+    } else if (!SWAP_DIFF && SWAP_HISTOGRAM_IMG) {
+        g2x_PixmapRecall(img, true);
+        display_histogram(hMaxImg, histogramImg);
+    } else if (SWAP_DIFF && !SWAP_HISTOGRAM_DIFF) {
+        g2x_PixmapShow(visu, true);
+    } else if (!SWAP_DIFF && !SWAP_HISTOGRAM_IMG) {
+        g2x_PixmapRecall(img, true);
+    } else {
+        g2x_PixmapRecall(img, true);
     }
 }
 
@@ -203,8 +229,9 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "\e[1m%s\e[0m : cannot read %s \n", argv[0], argv[1]);
         return 1;
     }
-
-    generate_dif_filename(argv[1]); // Génération du nom de fichier .dif
+    
+    // Stocke le nom du fichier .dif
+    sprintf(dif_filename, "./DIFF/%s.dif", rootname);
 
     g2x_SetInitFunction(init); /*! fonction d'initialisation !*/
     g2x_SetCtrlFunction(ctrl); /*! fonction de controle      !*/
