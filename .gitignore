@@ -3,3 +3,4 @@
 main
 differences.o
 pgmtodif
+DIFF/*.dif
