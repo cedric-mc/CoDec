@@ -21,7 +21,7 @@ LFLAGS = $(libG2X)$(EXT)
 SRC = src/
 
 # Liste des exécutables à générer
-# ALL = main pgmtodif
+# ALL = main pgmtodif diftopgm
 ALL = pgmtodif diftopgm
 # ALL = main
 

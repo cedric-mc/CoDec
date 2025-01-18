@@ -109,7 +109,7 @@ bool decode_dif(ImgDif *img, const char *filename) {
     }
 
     // --- DÉCOMPRESSION ---
-    dword *decoded_data = (dword *)malloc(N * 5);
+    dword *decoded_data = (dword *)malloc(N * 1.5);
     if (!decoded_data) {
         fprintf(stderr, "Erreur d'allocation du buffer de décompression.\n");
         free(compressed_data);
@@ -117,13 +117,12 @@ bool decode_dif(ImgDif *img, const char *filename) {
     }
 
     int num_decoded = decode_differences((uchar *)decoded_data, compressed_data, N - 1);
-    // int num_decoded = decode_differences((uchar *)img->diffs, compressed_data, N - 1);
 
     if (num_decoded < N - 1) {
         fprintf(stderr, "Erreur de décompression: %d valeurs extraites au lieu de %d\n", num_decoded, N - 1);
-        // free(compressed_data);
-        // free(decoded_data);
-        // return false;
+        free(compressed_data);
+        free(decoded_data);
+        return false;
     }
 
     // Reconstruction de l'image
@@ -136,51 +135,6 @@ bool decode_dif(ImgDif *img, const char *filename) {
     free(decoded_data);
 
     return true;
-}
-
-static void save_dif_file(const char *filename, G2Xpixmap *pix, DiffImg *dif) {
-    int N = (pix->end - pix->map); // Nombre de différences à encoder
-
-    // --- ALLOCATION DU BUFFER ---
-    int buffer_size = (int)(BUFFER_FACTOR * N); 
-    uchar buffer[buffer_size]; // Allocation statique du buffer
-
-    // --- ENCODAGE DANS LE BUFFER ---
-    int bits_used = encode_differences(buffer, (int*)dif->map, N);
-
-    // --- OUVERTURE DU FICHIER .dif ---
-    FILE *file = fopen(filename, "wb");
-    if (!file) {
-        fprintf(stderr, "Erreur d'ouverture du fichier.\n");
-        return false;
-    }
-
-    // --- ÉCRITURE DANS LE FICHIER ---
-
-    // --- EN-TÊTE ---
-    // Magic Number
-    write_uint16(file, 0xD1FF);
-
-    // Taille de l'image (Largeur, Hauteur)
-    write_uint16(file, (uint16_t)pix->width);
-    write_uint16(file, (uint16_t)pix->height);
-
-    // Quantificateur : 1 octet pour le nombre de niveaux, puis 4 octets pour les bits
-    fputc(0x04, file); // Toujours 4 niveaux
-    fputc(0x01, file);
-    fputc(0x02, file);
-    fputc(0x04, file);
-    fputc(0x08, file);
-    // --- FIN DE L'EN-TÊTE ---
-
-    // Premier pixel de l'image (first)
-    fputc(dif->first, file);
-
-    // --- ÉCRITURE DES DONNÉES COMPRESSÉES ---
-    fwrite(buffer, 1, (bits_used + 7) / 8, file);
-
-    fclose(file);
-    printf("Encodage terminé. %d bits écrits dans '%s'\n", bits_used, filename);
 }
 
 static void createDiffImg(void) {
@@ -262,10 +216,6 @@ void init(void) {
     createImg();
 }
 
-static void compress(void) {
-    save_dif_file(dif_filename, img, &dif);
-}
-
 /* passe la copie en négatif */
 static void self_negate(void) {
     for (uchar *p = visu->map; p < visu->end; p++) *p = ~*p;
@@ -287,7 +237,6 @@ void ctrl(void) {
     g2x_CreatePopUp("NEG", self_negate, "négatif sur la copie");
     g2x_CreateSwitch("O/DIF", &SWAP_DIFF, "affiche l'original ou la visuelle");
     g2x_CreatePopUp("Histogram Show", self_histogram, "affiche l'histogramDiffgramme");
-    g2x_CreatePopUp("Sauver .dif", compress, "Sauvegarder l'image compressée");
 }
 
 void evts(void)

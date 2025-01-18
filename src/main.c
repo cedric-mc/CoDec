@@ -22,8 +22,8 @@ static bool SWAP_HISTOGRAM_IMG = false; // Flag pour afficher l'histogramme de l
 
 // Structure pour stocker l'histogramme
 typedef struct {
-    int *hMax; // Valeur maximale de l'histogramme
-    int *histogram[256]; // Tableau de l'histogramme
+    int hMax; // Valeur maximale de l'histogramme
+    int histogram[256]; // Tableau de l'histogramme
 } Histogram;
 
 Histogram histogramDiff;
@@ -85,16 +85,16 @@ static void createImg(Histogram *histogramImg) {
 /*
 * Affiche l'histogramme de l'image
 */
-static void display_histogram(int hMax, int histogram[256]) {
+static void display_histogram(Histogram *histogramObject) {
     double x = g2x_GetXMin(); // Bord gauche de la fenêtre
     double y = g2x_GetYMin(); // Bord inférieur de la fenêtre
     double wtdh = (g2x_GetXMax() - g2x_GetXMin()) / 256; // Largeur de chaque barre
 
     double maxHeight = g2x_GetYMax() - g2x_GetYMin(); // Hauteur maximale dans l'espace G2X
-    double coef = maxHeight / hMax;                   // Mise à l'échelle basée sur la hauteur disponible
+    double coef = maxHeight / histogramObject->hMax; // Mise à l'échelle basée sur la hauteur disponible
 
     for (int elt = 0; elt < 256; elt++) {
-        double barHeight = histogram[elt] * coef; // Hauteur proportionnelle dans l'espace G2X
+        double barHeight = histogramObject->histogram[elt] * coef; // Hauteur proportionnelle dans l'espace G2X
         g2x_FillRectangle(x, y, x + wtdh, y + barHeight, G2Xr);
         x += wtdh;
     }
@@ -149,10 +149,10 @@ void evts(void)
 void draw(void) {
     if (SWAP_DIFF && SWAP_HISTOGRAM_DIFF) {
         g2x_PixmapShow(visu, true);
-        display_histogram(hMaxDiff, histogramDiff);
+        display_histogram(&histogramDiff);
     } else if (!SWAP_DIFF && SWAP_HISTOGRAM_IMG) {
         g2x_PixmapRecall(img, true);
-        display_histogram(hMaxImg, histogramImg);
+        display_histogram(&histogramImg);
     } else if (SWAP_DIFF && !SWAP_HISTOGRAM_DIFF) {
         g2x_PixmapShow(visu, true);
     } else if (!SWAP_DIFF && !SWAP_HISTOGRAM_IMG) {

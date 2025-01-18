@@ -265,6 +265,7 @@ extern int encode_differences(unsigned char *dest, int *src, int N) {
 int decode_differences(uchar *dest, uchar *src, int P) {
     BitStream stream = {src, CHAR_BIT};
     int N = 0;
+    signed char first_pixel;
 
     for (int i = 0; i < P; i++) {
         uchar prefix = 0;
