@@ -1,4 +1,5 @@
 #include <difimg.h>
+#include <differences.h>
 
 void print_binary(uchar *src, int N)
 {

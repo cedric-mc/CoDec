@@ -4,6 +4,7 @@
 #include <g2x.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 /* types publics */
 typedef signed short dword;
@@ -22,13 +23,6 @@ typedef struct
     unsigned char first; // Premier pixel brut
 } ImgDif;
 
-// Définition de la structure BitStream
-typedef struct
-{
-    unsigned char *ptr; // Pointeur vers l'octet courant
-    size_t cap;         // Nombre de bits disponibles dans l'octet courant
-} BitStream;
-
 
 /* fonctions publiques */
 bool difalloc(DiffImg *dif, int width, int height);
@@ -36,8 +30,8 @@ bool diffree(DiffImg *dif);
 bool diftopix(DiffImg *dif, G2Xpixmap *pix);
 bool pixtodif(G2Xpixmap *pix, DiffImg *dif);
 bool diftovisu(DiffImg *dif, G2Xpixmap *visu);
-int pgmtodif(const char *pgm_filename, const char *diff_filename);
-int diftopgm(const char *diff_filename, const char *pgm_filename);
+
+bool pixtodif_encode(G2Xpixmap *pix, DiffImg *dif);
 
 
 #endif

@@ -66,6 +66,21 @@ static void createImg(void) {
     }
 }
 
+static void display_histogram(int hMax, int histogram[256]) {
+    double x = g2x_GetXMin(); // Bord gauche de la fenêtre
+    double y = g2x_GetYMin(); // Bord inférieur de la fenêtre
+    double wtdh = (g2x_GetXMax() - g2x_GetXMin()) / 256; // Largeur de chaque barre
+
+    double maxHeight = g2x_GetYMax() - g2x_GetYMin(); // Hauteur maximale dans l'espace G2X
+    double coef = maxHeight / hMax;                   // Mise à l'échelle basée sur la hauteur disponible
+
+    for (int elt = 0; elt < 256; elt++) {
+        double barHeight = histogram[elt] * coef; // Hauteur proportionnelle dans l'espace G2X
+        g2x_FillRectangle(x, y, x + wtdh, y + barHeight, G2Xr);
+        x += wtdh;
+    }
+}
+
 static void display_histogramDiff(void) {
     double x = g2x_GetXMin(); // Bord gauche de la fenêtre
     double y = g2x_GetYMin(); // Bord inférieur de la fenêtre

@@ -28,7 +28,7 @@ main: difimg.o main.o
 	$(CC) $^ $(LFLAGS) -o $@
 
 # Règle spécifique pour l'exécutable 'pgmtodif'
-pgmtodif: difimg.o pgmtodif.o
+pgmtodif: differences.o pgmtodif.o
 	$(CC) $^ $(LFLAGS) -o $@
 
 # Règle générique pour créer un fichier .o à partir d'un fichier .c

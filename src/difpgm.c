@@ -42,6 +42,7 @@ extern void push_bits(BitStream *curr, uchar src, size_t size)
     /* (cur-1)->ptr : [xxxabcde] >> cur->ptr : [fghi----] cur->cap : 4 bits */
 }
 
+
 extern int encode_differences(unsigned char *dest, int *src, int N) {
     BitStream stream = {dest, CHAR_BIT};
     // int total_bits = 0;
@@ -77,27 +78,56 @@ extern int encode_differences(unsigned char *dest, int *src, int N) {
     return (int)(stream.ptr - dest) * CHAR_BIT + (CHAR_BIT - stream.cap); // return total_bits;
 }
 
-void save_dif_file(const char *filename, G2Xpixmap *img, DiffImg *dif) {
-    FILE *file = fopen(filename, "wb");
-    if (!file) {
-        perror("Erreur d'ouverture du fichier .dif");
-        return;
+/*
+ * Convertit une image normale en image différentielle
+ * Stocke la première valeur brute puis calcule les différences entre pixels successifs.
+ */
+bool pixtodif_encode(G2Xpixmap *pix, DiffImg *dif)
+{
+    if (pix == NULL || dif == NULL) return false; /* simple sécurité */
+    dif->first = *pix->map; /* 1er pixel, traité à part (non différentiel) */
+    uchar *p = pix->map + 1; // positionnement des pointeurs pour les pixels
+    dword *d = dif->map + 1; /* positionnement des pointeurs */
+    dword max = 0;
+
+    int N = (pix->end - pix->map); // Nombre de différences à encoder
+
+    // printf("Premier pixel : %d\n", dif->first);
+    while (p < pix->end)
+    {
+        *d = *p - *(p - 1);
+        if (abs(*d) > max) max = abs(*d);
+
+        // Affichage de la valeur différentielle
+        // printf("Diff[%ld] = %d\n", d - dif->map, *d);
+
+        p++;
+        d++;
+    }
+    dif->difmax = max;
+
+    // --- ENCODAGE DES DIFFÉRENCES ---
+    unsigned char *encoded_data = (unsigned char *)malloc(N * sizeof(unsigned char) * 2); // Allocation mémoire pour le résultat
+    if (!encoded_data) {
+        fprintf(stderr, "Erreur d'allocation mémoire pour l'encodage.\n");
+        return false;
     }
 
-    int N = img->width * img->height;
-    unsigned char *buffer = malloc(1.5 * N);
-    int encoded_size = encode_differences(buffer, dif->map, N);
+    int bits_used = encode_differences(encoded_data, (int*)dif->map, N); // Encodage
 
-    unsigned short magic = 0xD1FF;
-    fwrite(&magic, sizeof(unsigned short), 1, file);
-    fwrite(&img->width, sizeof(unsigned short), 1, file);
-    fwrite(&img->height, sizeof(unsigned short), 1, file);
-    unsigned char quant[4] = {0x01, 0x02, 0x04, 0x08};
-    fwrite(quant, sizeof(unsigned char), 4, file);
-    fwrite(&dif->first, sizeof(unsigned char), 1, file);
-    fwrite(buffer, sizeof(unsigned char), (encoded_size + 7) / 8, file);
+    printf("Encodage terminé. %d bits utilisés.\n", bits_used);
 
-    free(buffer);
-    fclose(file);
-    printf("✅ Image enregistrée sous : %s\n", filename);
+    // (Optionnel) Écriture des données encodées dans un fichier
+    FILE *file = fopen("encoded_diff.bin", "wb");
+    if (file) {
+        fwrite(encoded_data, 1, (bits_used + 7) / 8, file);
+        fclose(file);
+        printf("Données encodées enregistrées dans 'encoded_diff.bin'.\n");
+    } else {
+        fprintf(stderr, "Erreur lors de l'écriture du fichier.\n");
+    }
+
+    free(encoded_data); // Libération de la mémoire allouée pour l'encodage
+
+    return true;
 }
