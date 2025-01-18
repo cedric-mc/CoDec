@@ -1,5 +1,6 @@
 #include <g2x.h>
 #include <difimg.h>
+#include <histogram.h>
 
 /* variables globales */
 /* récupère et segmente le chemin vers l'image : pathname/rootname.extname */
@@ -21,84 +22,13 @@ static bool SWAP_HISTOGRAM_IMG = false; // Flag pour afficher l'histogramme de l
 // static int histogramImg [256] = {0}; // Tableau de l'histogramme de l'image originale
 
 // Structure pour stocker l'histogramme
-typedef struct {
-    int hMax; // Valeur maximale de l'histogramme
-    int histogram[256]; // Tableau de l'histogramme
-} Histogram;
+// typedef struct {
+//     int hMax; // Valeur maximale de l'histogramme
+//     int histogram[256]; // Tableau de l'histogramme
+// } Histogram;
 
 Histogram histogramDiff;
 Histogram histogramImg;
-
-static void initHistogram(Histogram *histogram) {
-    histogram->hMax = 0;
-    for (int i = 0; i < 256; i++) {
-        histogram->histogram[i] = 0;
-    }
-}
-
-static void createDiffImg(Histogram *histogramDiff) {
-    if (!dif.map || !dif.end) {
-        fprintf(stderr, "Erreur : données de l'image non valides\n");
-        return;
-    }
-
-    if (dif.width <= 0 || dif.height <= 0) {
-        fprintf(stderr, "Erreur : dimensions de l'image incorrectes [%dx%d]\n", dif.width, dif.height);
-        return;
-    }
-
-    for (uchar *p = dif.map; p < dif.end; p++) {
-        if (*p >= 0 && *p < 256) {
-            histogramDiff->histogram[*p]++;
-            if (histogramDiff->hMax < histogramDiff->histogram[*p]) {
-                histogramDiff->hMax = histogramDiff->histogram[*p];
-            }
-        } else {
-            fprintf(stderr, "Valeur pixel invalide : %f\n", *p);
-        }
-    }
-}
-
-static void createImg(Histogram *histogramImg) {
-    if (!img || !img->map || !img->end) {
-        fprintf(stderr, "Erreur : données de l'image non valides\n");
-        return;
-    }
-
-    if (img->width <= 0 || img->height <= 0) {
-        fprintf(stderr, "Erreur : dimensions de l'image incorrectes [%fx%f]\n", img->width, img->height);
-        return;
-    }
-
-    for (uchar *p = img->map; p < img->end; p++) {
-        if (*p >= 0 && *p < 256) {
-            histogramImg->histogram[*p]++;
-            if (histogramImg->hMax < histogramImg->histogram[*p]) {
-                histogramImg->hMax = histogramImg->histogram[*p];
-            }
-        } else {
-            fprintf(stderr, "Valeur pixel invalide : %f\n", *p);
-        }
-    }
-}
-
-/*
-* Affiche l'histogramme de l'image
-*/
-static void display_histogram(Histogram *histogramObject) {
-    double x = g2x_GetXMin(); // Bord gauche de la fenêtre
-    double y = g2x_GetYMin(); // Bord inférieur de la fenêtre
-    double wtdh = (g2x_GetXMax() - g2x_GetXMin()) / 256; // Largeur de chaque barre
-
-    double maxHeight = g2x_GetYMax() - g2x_GetYMin(); // Hauteur maximale dans l'espace G2X
-    double coef = maxHeight / histogramObject->hMax; // Mise à l'échelle basée sur la hauteur disponible
-
-    for (int elt = 0; elt < 256; elt++) {
-        double barHeight = histogramObject->histogram[elt] * coef; // Hauteur proportionnelle dans l'espace G2X
-        g2x_FillRectangle(x, y, x + wtdh, y + barHeight, G2Xr);
-        x += wtdh;
-    }
-}
 
 /*! fonction d'initialisation !*/
 void init(void) {
@@ -113,8 +43,8 @@ void init(void) {
 
     initHistogram(&histogramDiff);
     initHistogram(&histogramImg);
-    createDiffImg(&histogramDiff);
-    createImg(&histogramImg);
+    createDiffImg(&histogramDiff, &dif);
+    createImg(&histogramImg, img);
 }
 
 /* passe la copie en négatif */
