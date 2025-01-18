@@ -8,20 +8,18 @@
 
 /* types publics */
 typedef signed short dword;
-typedef struct
-{
+typedef struct {
     int width, height;
     dword *map, *end;
     uchar first;
     dword difmax;
-} DiffImg;
+} DiffImg; // Structure contenant les données différentielles
 
-typedef struct 
-{
+typedef struct {
     unsigned short width;
     unsigned short height;
     unsigned char first; // Premier pixel brut
-} ImgDif;
+} ImgDif; // Structure contenant les données de l'image différentielle
 
 // Définition de la structure BitStream
 typedef struct

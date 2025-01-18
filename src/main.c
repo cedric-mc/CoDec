@@ -36,7 +36,7 @@ static void initHistogram(Histogram *histogram) {
     }
 }
 
-static void createDiffImg(void) {
+static void createDiffImg(Histogram *histogramDiff) {
     if (!dif.map || !dif.end) {
         fprintf(stderr, "Erreur : données de l'image non valides\n");
         return;
@@ -49,9 +49,9 @@ static void createDiffImg(void) {
 
     for (uchar *p = dif.map; p < dif.end; p++) {
         if (*p >= 0 && *p < 256) {
-            histogramDiff[*p]++;
-            if (hMaxDiff < histogramDiff[*p]) {
-                hMaxDiff = histogramDiff[*p];
+            histogramDiff->histogram[*p]++;
+            if (histogramDiff->hMax < histogramDiff->histogram[*p]) {
+                histogramDiff->hMax = histogramDiff->histogram[*p];
             }
         } else {
             fprintf(stderr, "Valeur pixel invalide : %f\n", *p);
@@ -59,7 +59,7 @@ static void createDiffImg(void) {
     }
 }
 
-static void createImg(void) {
+static void createImg(Histogram *histogramImg) {
     if (!img || !img->map || !img->end) {
         fprintf(stderr, "Erreur : données de l'image non valides\n");
         return;
@@ -72,9 +72,9 @@ static void createImg(void) {
 
     for (uchar *p = img->map; p < img->end; p++) {
         if (*p >= 0 && *p < 256) {
-            histogramImg[*p]++;
-            if (hMaxImg < histogramImg[*p]) {
-                hMaxImg = histogramImg[*p];
+            histogramImg->histogram[*p]++;
+            if (histogramImg->hMax < histogramImg->histogram[*p]) {
+                histogramImg->hMax = histogramImg->histogram[*p];
             }
         } else {
             fprintf(stderr, "Valeur pixel invalide : %f\n", *p);
@@ -113,8 +113,8 @@ void init(void) {
 
     initHistogram(&histogramDiff);
     initHistogram(&histogramImg);
-    createDiffImg();
-    createImg();
+    createDiffImg(&histogramDiff);
+    createImg(&histogramImg);
 }
 
 /* passe la copie en négatif */
