@@ -6,6 +6,7 @@
 
 #include <g2x.h>
 #include <difimg.h>
+#include <differences.h>
 #include <string.h>
 
 #define MAGIC_NUMBER 0xD1FF // Identifiant unique pour le format DIFF

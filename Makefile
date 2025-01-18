@@ -21,11 +21,12 @@ LFLAGS = $(libG2X)$(EXT)
 SRC = src/
 
 # Liste des exécutables à générer
-ALL = main pgmtodif
+# ALL = main pgmtodif
+ALL = pgmtodif
 
 # Règle spécifique pour l'exécutable 'main'
-main: difimg.o main.o
-	$(CC) $^ $(LFLAGS) -o $@
+# main: difimg.o main.o
+# 	$(CC) $^ $(LFLAGS) -o $@
 
 # Règle spécifique pour l'exécutable 'pgmtodif'
 pgmtodif: differences.o pgmtodif.o

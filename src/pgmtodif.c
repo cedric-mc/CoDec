@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <g2x.h>
-#include <difimg.h>
-#include <differences.h> 
+#include <differences.h>
 
 #define MAGIC_NUMBER 0xD1FF // Identifiant unique pour le format DIFF
 
@@ -128,36 +127,8 @@ int pgmtodif(const char *pgm_filename, const char *diff_filename) {
     return 0;
 }
 
-// Fonction d'encodage et sauvegarde de l'image en format .dif
-void save_dif_file(const char *filename, G2Xpixmap *img, DiffImg *dif) {
-    FILE *file = fopen(filename, "wb");
-
-    if (!file) {
-        perror("Erreur d'ouverture du fichier .dif");
-        return;
-    }
-
-    int N = img->width * img->height;
-    unsigned char *buffer = malloc(1.5 * N);
-    int encoded_size = encode_differences(buffer, dif->map, N);
-
-    unsigned short magic = 0xD1FF;
-    fwrite(&magic, sizeof(unsigned short), 1, file);
-    fwrite(&img->width, sizeof(unsigned short), 1, file);
-    fwrite(&img->height, sizeof(unsigned short), 1, file);
-    unsigned char quant[4] = {0x01, 0x02, 0x04, 0x08};
-    fwrite(quant, sizeof(unsigned char), 4, file);
-    fwrite(&dif->first, sizeof(unsigned char), 1, file);
-    fwrite(buffer, sizeof(unsigned char), (encoded_size + 7) / 8, file);
-
-    free(buffer);
-    fclose(file);
-    printf("✅ Image enregistrée sous : %s\n", filename);
-}
-
 /*! fonction d'initialisation !*/
-void init(void)
-{
+void init(void) {
     g2x_PixmapPreload(img);
     int w = img->width, h = img->height;
     
