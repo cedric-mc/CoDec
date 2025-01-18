@@ -22,16 +22,16 @@ SRC = src/
 
 # Liste des exécutables à générer
 # ALL = main pgmtodif
-ALL = pgmtodif
-# ALL = main
+# ALL = pgmtodif
+ALL = main
 
 # Règle spécifique pour l'exécutable 'main'
-# main: difimg.o main.o
-# 	$(CC) $^ $(LFLAGS) -o $@
+main: difimg.o main.o
+	$(CC) $^ $(LFLAGS) -o $@
 
 # Règle spécifique pour l'exécutable 'pgmtodif'
-pgmtodif: differences.o pgmtodif.o
-	$(CC) $^ $(LFLAGS) -o $@
+# pgmtodif: differences.o pgmtodif.o
+# 	$(CC) $^ $(LFLAGS) -o $@
 
 # Règle générique pour créer un fichier .o à partir d'un fichier .c
 %.o : $(SRC)%.c
