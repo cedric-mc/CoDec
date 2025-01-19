@@ -19,11 +19,14 @@ DiffImg dif = {0};
 static bool SWAP_DIFF = false; /* affichage : false->original  true->copie */
 static bool SWAP_HISTOGRAM_DIFF = false; // Flag pour afficher l'histogramme de l'image différentielle
 static bool SWAP_HISTOGRAM_IMG = false; // Flag pour afficher l'histogramme de l'image originale
+static bool SWAP_RATIO = false; // Flag pour afficher le taux de compression
 
 Histogram histogramDiff;
 Histogram histogramImg;
 
 static char *dif_filename[256]; // Stocke le nom du fichier .dif 📂
+
+static float compression_ratio = 50.0; // Taux de compression
 
 static void save_dif_file(const char *filename, G2Xpixmap *pix, DiffImg *dif) {
     size_t N = dif->width * dif->height;
@@ -115,6 +118,7 @@ void ctrl(void) {
     g2x_CreateSwitch("O/DIF", &SWAP_DIFF, "affiche l'original ou la visuelle");
     g2x_CreatePopUp("Histogram Show", self_histogram, "affiche l'histogramme");
     g2x_CreatePopUp("Sauver .dif", compress, "Sauvegarder l'image compressée");
+    g2x_CreateSwitch("Ratio", &SWAP_RATIO, "Affiche le taux de compression");
 }
 
 void evts(void)
@@ -136,6 +140,12 @@ void draw(void) {
         g2x_PixmapRecall(img, true);
     } else {
         g2x_PixmapRecall(img, true);
+    }
+
+    switch (SWAP_RATIO) {
+        case true:
+            g2x_StaticPrint(g2x_GetPixWidth()/2,40,G2Xr,"Taux de compression : %0.2f%%", compression_ratio);
+            break;
     }
 }
 

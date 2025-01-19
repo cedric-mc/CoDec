@@ -136,6 +136,21 @@ bool decode_dif(DiffImg *dif, const char *filename) {
     return true;
 }
 
+/**
+ * Sauvegarde un fichier .pgm
+ */
+static void save_pgm_file(const char *filename, G2Xpixmap *pix) {
+    FILE *file = fopen(filename, "wb");
+    if (!file) {
+        fprintf(stderr, "Erreur : Impossible d'ouvrir %s\n", filename);
+        return;
+    }
+
+    fprintf(file, "P5\n%d %d\n255\n", pix->width, pix->height);
+    fwrite(pix->map, 1, pix->width * pix->height, file);
+    fclose(file);
+}
+
 /*! fonction d'initialisation !*/
 void init(void) {
     int w = dif.width, h = dif.height;
@@ -151,9 +166,9 @@ void init(void) {
     g2x_PixmapShow(visu, true);
 
     initHistogram(&histogramDiff);
-    // initHistogram(&histogramImg);
+    initHistogram(&histogramImg);
     createDiffImg(&histogramDiff, &dif);
-    // createImg(&histogramImg, img);
+    createImg(&histogramImg, &img);
 }
 
 /* passe la copie en négatif */
@@ -164,10 +179,14 @@ static void self_negate(void) {
 static void self_histogram(void) {
     // Selon si l'image est l'originale ou la différentielle, on affiche l'histogramme correspondant
     if (SWAP_IMG) {
-        SWAP_HISTOGRAM_DIFF = !SWAP_HISTOGRAM_DIFF;
-    } else {
         SWAP_HISTOGRAM_IMG = !SWAP_HISTOGRAM_IMG;
+    } else {
+        SWAP_HISTOGRAM_DIFF = !SWAP_HISTOGRAM_DIFF;
     }
+}
+
+static void compress(void) {
+    save_pgm_file(dif_filename, orig);
 }
 
 /*! fonction de contrôle      !*/
@@ -177,6 +196,7 @@ void ctrl(void) {
     g2x_CreatePopUp("NEG", self_negate, "négatif sur la copie");
     g2x_CreateSwitch("DIF/O", &SWAP_IMG, "affiche l'original ou la visuelle");
     g2x_CreatePopUp("Histogram Show", self_histogram, "affiche l'histograme");
+    g2x_CreatePopUp("Sauver .dif.pgm", compress, "Sauvegarder l'image compressée");
 }
 
 void evts(void)
@@ -189,9 +209,11 @@ void draw(void) {
     switch (SWAP_IMG) {
         case false:
             g2x_PixmapShow(orig, true);
+            display_histogram(&histogramImg);
             break;
         case true:
             g2x_PixmapShow(visu, true);
+            display_histogram(&histogramDiff);
             break;
     }
 }
@@ -237,7 +259,7 @@ int main(int argc, char *argv[]) {
     g2x_SetWindowCoord(-1.,-xyratio,+1,+xyratio);
     
     // Stocke le nom du fichier .pgm (truc.dif -> ./PGM/truc.dif.pgm)
-    sprintf(dif_filename, "./PGM/%s.dif.pgm", &rootname);
+    sprintf(dif_filename, "./PGM/%s.pgm", argv[1]);
 
     printf("Affichage de l'image %s\n", dif_filename);
 

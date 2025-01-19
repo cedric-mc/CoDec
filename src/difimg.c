@@ -53,6 +53,7 @@ extern bool diffree(DiffImg *dif)
 extern bool diftopix(DiffImg *dif, G2Xpixmap *orig)
 {
     if (dif == NULL || orig == NULL) return false; /* simple sécurité */ // Si la structure DiffImg ou l'image originale est NULL, alors on retourne false
+    *orig->map = dif->first; // Premier pixel de l'image originale
     uchar *p = orig->map + 1; // Pointeur vers le deuxième pixel de l'image originale
     dword *d = dif->map + 1; // Pointeur vers le deuxième pixel de la carte des différences
     *p = dif->first; // Premier pixel de l'image originale
