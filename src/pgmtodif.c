@@ -3,8 +3,9 @@
 #include <differences.h>
 #include <difimg.h>
 #include <histogram.h>
+#include <encodage.h>
 
-#define BUFFER_FACTOR 1.5 // Facteur pour la taille du buffer compressé
+#define BUFFER_FACTOR 12 // Facteur pour la taille du buffer compressé
 
 /* variables globales */
 /* récupère et segmente le chemin vers l'image : pathname/rootname.extname */
@@ -24,17 +25,12 @@ static bool SWAP_RATIO = false; // Flag pour afficher le taux de compression
 Histogram histogramDiff;
 Histogram histogramImg;
 
+Encodage encodage;
+
 static char *dif_filename[256]; // Stocke le nom du fichier .dif 📂
 
-static void save_dif_file(const char *filename, G2Xpixmap *pix, DiffImg *dif) {
+static void save_dif_file(const char *filename, G2Xpixmap *pix, DiffImg *dif, Encodage *encodage) {
     size_t N = dif->width * dif->height;
-
-    // --- ALLOCATION DU BUFFER ---
-    size_t buffer_size = 12 * N; // Taille du buffer
-    uchar *buffer = calloc(buffer_size, sizeof(uchar));
-
-    // --- ENCODAGE DANS LE BUFFER ---
-    encode_differences(buffer, dif->map, N);
 
     // --- OUVERTURE DU FICHIER .dif ---
     FILE *file = fopen(filename, "wb");
@@ -65,11 +61,7 @@ static void save_dif_file(const char *filename, G2Xpixmap *pix, DiffImg *dif) {
     fputc(dif->first, file);
 
     // --- ÉCRITURE DES DONNÉES COMPRESSÉES ---
-    fwrite(buffer, sizeof(uchar), buffer_size, file);
-
-    // --- CALCUL DU TAUX DE COMPRESSION ---
-    // compression_ratio = (float)buffer_size / (float)(pix->width * pix->height);
-    
+    fwrite(encodage->buffer, sizeof(uchar), encodage->buffer_size, file);
 
     fclose(file);
     printf("Encodage terminé. Écriture dans '%s'\n", filename);
@@ -79,10 +71,6 @@ static void save_dif_file(const char *filename, G2Xpixmap *pix, DiffImg *dif) {
 void init(void) {
     g2x_PixmapPreload(img);
     int w = img->width, h = img->height;
-
-    // Calcul du taux de compression
-    float original_size = (float)(pix->width * pix->height);
-    float compression_ratio = (compressed_size / original_size) * 100.0;
     
     difalloc(&dif, w, h);
     pixtodif(img, &dif);
@@ -95,10 +83,12 @@ void init(void) {
 
     createDiffImg(&histogramDiff, &dif);
     createImg(&histogramImg, img);
+
+    initEncodage(&encodage, &dif);
 }
 
 static void compress(void) {
-    save_dif_file(dif_filename, img, &dif);
+    save_dif_file(dif_filename, img, &dif, &encodage);
 }
 
 /* passe la copie en négatif */
@@ -149,7 +139,7 @@ void draw(void) {
 
     switch (SWAP_RATIO) {
         case true:
-            g2x_StaticPrint(g2x_GetPixWidth()/2,40,G2Xr,"Taux de compression : %f", compression_ratio);
+            g2x_StaticPrint(g2x_GetPixWidth()/2,40, G2Xr, "Taux de compression : %.2f  %%", encodage.compression_ratio);
             break;
     }
 }

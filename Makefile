@@ -30,7 +30,7 @@ main: difimg.o histogram.o main.o
 	$(CC) $^ $(LFLAGS) -o $@
 
 # Règle spécifique pour l'exécutable 'pgmtodif'
-pgmtodif: difimg.o histogram.o differences.o pgmtodif.o
+pgmtodif: difimg.o histogram.o differences.o encodage.o pgmtodif.o
 	$(CC) $^ $(LFLAGS) -o $@
 
 # Règle spécifique pour l'exécutable 'diftopgm'
