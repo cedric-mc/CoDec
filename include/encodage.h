@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <g2x.h>
+#include <difimg.h>
 
 
 typedef struct {
@@ -16,6 +17,7 @@ typedef struct {
 
 
 void initEncodage(Encodage *encodage, DiffImg *dif);
+void save_dif_file(const char *filename, G2Xpixmap *pix, DiffImg *dif, Encodage *encodage);
 
 
 #endif /* ENCODAGE_H */
