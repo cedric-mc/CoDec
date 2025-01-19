@@ -26,8 +26,6 @@ Histogram histogramImg;
 
 static char *dif_filename[256]; // Stocke le nom du fichier .dif 📂
 
-static float compression_ratio = 50.0; // Taux de compression
-
 static void save_dif_file(const char *filename, G2Xpixmap *pix, DiffImg *dif) {
     size_t N = dif->width * dif->height;
 
@@ -68,6 +66,9 @@ static void save_dif_file(const char *filename, G2Xpixmap *pix, DiffImg *dif) {
 
     // --- ÉCRITURE DES DONNÉES COMPRESSÉES ---
     fwrite(buffer, sizeof(uchar), buffer_size, file);
+
+    // --- CALCUL DU TAUX DE COMPRESSION ---
+    // compression_ratio = (float)buffer_size / (float)(pix->width * pix->height);
     
 
     fclose(file);
@@ -78,6 +79,10 @@ static void save_dif_file(const char *filename, G2Xpixmap *pix, DiffImg *dif) {
 void init(void) {
     g2x_PixmapPreload(img);
     int w = img->width, h = img->height;
+
+    // Calcul du taux de compression
+    float original_size = (float)(pix->width * pix->height);
+    float compression_ratio = (compressed_size / original_size) * 100.0;
     
     difalloc(&dif, w, h);
     pixtodif(img, &dif);
@@ -144,7 +149,7 @@ void draw(void) {
 
     switch (SWAP_RATIO) {
         case true:
-            g2x_StaticPrint(g2x_GetPixWidth()/2,40,G2Xr,"Taux de compression : %0.2f%%", compression_ratio);
+            g2x_StaticPrint(g2x_GetPixWidth()/2,40,G2Xr,"Taux de compression : %f", compression_ratio);
             break;
     }
 }
