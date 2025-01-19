@@ -77,7 +77,7 @@ void init(void) {
     int w = img->width, h = img->height;
     
     difalloc(&dif, w, h);
-    pixtodif_encode(img, &dif);
+    pixtodif(img, &dif);
     
     g2x_PixmapAlloc(&visu, w, h, 1, 255);
     diftovisu(&dif, visu);
@@ -113,7 +113,7 @@ void ctrl(void) {
     g2x_SetFontAttributes('l', 'b', 'c');
     g2x_CreatePopUp("NEG", self_negate, "négatif sur la copie");
     g2x_CreateSwitch("O/DIF", &SWAP_DIFF, "affiche l'original ou la visuelle");
-    g2x_CreatePopUp("Histogram Show", self_histogram, "affiche l'histogramDiffgramme");
+    g2x_CreatePopUp("Histogram Show", self_histogram, "affiche l'histogramme");
     g2x_CreatePopUp("Sauver .dif", compress, "Sauvegarder l'image compressée");
 }
 

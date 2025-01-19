@@ -16,7 +16,7 @@ static G2Xpixmap *visu = NULL, *orig = NULL;
 DiffImg dif = {0};
 
 /* paramètres d'interaction */
-static bool SWAP_DIFF = false; /* affichage : false->original  true->copie */
+static bool SWAP_IMG = true; /* affichage : false->original  true->copie */
 static bool SWAP_HISTOGRAM_DIFF = false; // Flag pour afficher l'histogramme de l'image différentielle
 static bool SWAP_HISTOGRAM_IMG = false; // Flag pour afficher l'histogramme de l'image originale
 
@@ -120,15 +120,7 @@ bool decode_dif(DiffImg *dif, const char *filename) {
     printf("Décompression des données...\n");
     int num_decoded = decode_differences(decoded_data, compressed_data, data_size);
 
-    // if (num_decoded != N) {
-    //     fprintf(stderr, "Erreur de décompression: %d valeurs extraites au lieu de %d\n", num_decoded, N - 1);
-    //     free(compressed_data);
-    //     free(decoded_data);
-    //     return false;
-    // }
-
     // Remplissage de la structure DiffImg
-    printf("ttoerrb");
     difalloc(dif, width, height);
     dif->first = first;
     dword difmax = 0;
@@ -137,7 +129,6 @@ bool decode_dif(DiffImg *dif, const char *filename) {
         if (difmax < abs(decoded_data[i])) difmax = abs(decoded_data[i]);
     }
     dif->difmax = difmax;
-    printf("%d y omax", difmax);
 
     free(compressed_data);
     free(decoded_data);
@@ -147,16 +138,21 @@ bool decode_dif(DiffImg *dif, const char *filename) {
 
 /*! fonction d'initialisation !*/
 void init(void) {
-    // g2x_PixmapPreload(img);
     int w = dif.width, h = dif.height;
     
-    g2x_PixmapAlloc(&visu, w, h, 1, 255);
-    diftovisu(&dif, visu);
+    g2x_PixmapAlloc(&visu, w, h, 1, 255); // Allocation de la pixmap pour l'image visuelle
+    diftovisu(&dif, visu); // Conversion de l'image différentielle en image visuelle
 
-    // g2x_PixmapAlloc(&orig, w, h, 1, 255);
-    // diftopix(&dif, orig);
+    g2x_PixmapAlloc(&orig, w, h, 1, 255); // Allocation de la pixmap pour l'image originale
+    diftopix(&dif, orig); // Conversion de l'image différentielle en image originale
 
-    // createDiffImg(&histogramDiff, &dif);
+    pixtodif(orig, &dif); // Conversion de l'image originale en image différentielle
+
+    g2x_PixmapShow(visu, true);
+
+    initHistogram(&histogramDiff);
+    // initHistogram(&histogramImg);
+    createDiffImg(&histogramDiff, &dif);
     // createImg(&histogramImg, img);
 }
 
@@ -167,7 +163,7 @@ static void self_negate(void) {
 
 static void self_histogram(void) {
     // Selon si l'image est l'originale ou la différentielle, on affiche l'histogramme correspondant
-    if (SWAP_DIFF) {
+    if (SWAP_IMG) {
         SWAP_HISTOGRAM_DIFF = !SWAP_HISTOGRAM_DIFF;
     } else {
         SWAP_HISTOGRAM_IMG = !SWAP_HISTOGRAM_IMG;
@@ -179,8 +175,8 @@ void ctrl(void) {
     // selection de la fonte : ('n':normal,'l':large,'L':LARGE),('n':normal,'b':bold),('l':left, 'c':center, 'r':right)
     g2x_SetFontAttributes('l', 'b', 'c');
     g2x_CreatePopUp("NEG", self_negate, "négatif sur la copie");
-    g2x_CreateSwitch("O/DIF", &SWAP_DIFF, "affiche l'original ou la visuelle");
-    g2x_CreatePopUp("Histogram Show", self_histogram, "affiche l'histogramDiffgramme");
+    g2x_CreateSwitch("DIF/O", &SWAP_IMG, "affiche l'original ou la visuelle");
+    g2x_CreatePopUp("Histogram Show", self_histogram, "affiche l'histograme");
 }
 
 void evts(void)
@@ -190,7 +186,14 @@ void evts(void)
 
 /*! fonction de dessin        !*/
 void draw(void) {
-    g2x_PixmapShow(visu, true);
+    switch (SWAP_IMG) {
+        case false:
+            g2x_PixmapShow(orig, true);
+            break;
+        case true:
+            g2x_PixmapShow(visu, true);
+            break;
+    }
 }
 
 /*! fonction de sortie        !*/
@@ -234,7 +237,9 @@ int main(int argc, char *argv[]) {
     g2x_SetWindowCoord(-1.,-xyratio,+1,+xyratio);
     
     // Stocke le nom du fichier .pgm (truc.dif -> ./PGM/truc.dif.pgm)
-    sprintf(dif_filename, "./PGM/%s.dif.pgm", rootname);
+    sprintf(dif_filename, "./PGM/%s.dif.pgm", &rootname);
+
+    printf("Affichage de l'image %s\n", dif_filename);
 
     g2x_SetInitFunction(init); /*! fonction d'initialisation !*/
     g2x_SetCtrlFunction(ctrl); /*! fonction de controle      !*/

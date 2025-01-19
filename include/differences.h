@@ -15,7 +15,6 @@ typedef struct
 } BitStream;
 
 
-bool pixtodif_encode(G2Xpixmap *pix, DiffImg *dif);
 void push_bits(BitStream *curr, uchar src, size_t size);
 void pull_bits(BitStream *curr, uchar *dst, size_t size);
 int encode_differences(unsigned char *dest, dword *src, int N);
