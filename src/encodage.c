@@ -176,4 +176,5 @@ extern void save_pgm_file(const char *filename, G2Xpixmap *pix) {
     fprintf(file, "P5\n%d %d\n255\n", pix->width, pix->height);
     fwrite(pix->map, 1, pix->width * pix->height, file);
     fclose(file);
+    printf("Image enregistrée dans '%s'\n", filename);
 }

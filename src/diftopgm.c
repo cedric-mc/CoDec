@@ -139,7 +139,9 @@ int main(int argc, char *argv[]) {
     g2x_SetWindowCoord(-1.,-xyratio,+1,+xyratio);
     
     // Stocke le nom du fichier .pgm (truc.dif -> ./PGM/truc.dif.pgm)
-    sprintf(dif_filename, "./PGM/%s.pgm", argv[1]);
+    // Uniquement le nom du fichier sans le chemin
+    char *filename = strrchr(argv[1], '/');
+    sprintf(dif_filename, "./PGM%s.pgm", filename);
 
     printf("Affichage de l'image %s\n", dif_filename);
 

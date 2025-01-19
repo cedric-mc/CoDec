@@ -1,4 +1,38 @@
 Participants : Cédric MARIYA CONSTANTINE et Thamiz SARBOUDINE
-Appel de compilation : 
+Note : La banque d'images utilisée est celle procurée par l'enseignant sur Moodle (E-LEARNING). 
+Nous avons programmé un CoDec (pgmtodif et diftopgm) qui compresse/décompresse une image qui se base sur un algorithme pseudo-Huffman, qui prennent des images en niveaux de gris (.pgm).
 
-Exemples d'appel :
+Appel de compilation : 
+Depuis la racine du projet, lancez la commande suivante : make all
+
+Appels d'exécution :
+1. encodeur pgmtodif : ./pgmtodif <fichier.pgm>
+<fichier.pgm> : nom du fichier pgm à afficher, si le fichier n'est pas dans le répertoire courant, spécifier le chemin absolu ou relatif sinon ajouter './' devant le chemin relatif.
+
+2. decodeur diftopgm : ./diftopgm <fichier.dif>
+<fichier.dif> : nom du fichier dif à afficher, si le fichier n'est pas dans le répertoire courant, spécifier le chemin absolu ou relatif sinon ajouter './' devant le chemin relatif.
+
+Répartition du travail entre les participants :
+Nous avons travaillé ensemble sur l'ensemble des fichiers du projet. Nous avons fait des recherches sur les différentes méthodes de compression d'images et nous avons implémenté les fonctions nécessaires pour réaliser ce projet. Nous avons également travaillé sur la rédaction de ce rapport.
+Thamiz Sarboudine a davantage contribué aux calculs (côté backend) et Cédric Mariya Constantine a davantage contribué à l'interface graphique (côté frontend).
+
+Description des fonctionnalités :
+Nous avons l'encodeur et le décodeur : 
+Encodeur (pgmtodif) :
+- Popup pour avoir l'image différentielle négative ou positive (noir ou blanc).
+- Affichage de l'image différentielle ou de l'image originale.
+- Affichage de l'histogramme de l'image originale et de l'image différentielle.
+- Sauvegarde de l'image différentielle en fichier .dif.
+- Affichage du ratio du taux de compression.
+
+Décodeur (diftopgm) :
+- Popup pour avoir l'image différentielle négative ou positive (noir ou blanc).
+- Affichage de l'image différentielle ou de l'image originale.
+- Affichage de l'histogramme de l'image originale et de l'image différentielle.
+- Sauvegarde de l'image originale en fichier .pgm. (indisponible pour le moment).
+
+
+Problèmes rencontrés :
+- Résolu : Afficher l'image originale à partir de l'image différentielle. Nous avons résolu ce problème en remarquant que le formatage de l'image différentielle n'était pas correct. 
+- Nous avons essayé avec une image transformée en noir et blanc, mais nous n'avons pas réussi à l'afficher car la taille de l'image était trop grande (3017x3017).
+
