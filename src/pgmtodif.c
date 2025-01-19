@@ -26,14 +26,14 @@ Histogram histogramImg;
 static char *dif_filename[256]; // Stocke le nom du fichier .dif 📂
 
 static void save_dif_file(const char *filename, G2Xpixmap *pix, DiffImg *dif) {
-    int N = (pix->end - pix->map); // Nombre de différences à encoder
+    size_t N = dif->width * dif->height;
 
     // --- ALLOCATION DU BUFFER ---
-    int buffer_size = (int)(BUFFER_FACTOR * N); 
-    uchar buffer[buffer_size]; // Allocation statique du buffer
+    size_t buffer_size = 12 * N; // Taille du buffer
+    uchar *buffer = calloc(buffer_size, sizeof(uchar));
 
     // --- ENCODAGE DANS LE BUFFER ---
-    int bits_used = encode_differences(buffer, (int*)dif->map, N);
+    encode_differences(buffer, dif->map, N);
 
     // --- OUVERTURE DU FICHIER .dif ---
     FILE *file = fopen(filename, "wb");
@@ -64,10 +64,11 @@ static void save_dif_file(const char *filename, G2Xpixmap *pix, DiffImg *dif) {
     fputc(dif->first, file);
 
     // --- ÉCRITURE DES DONNÉES COMPRESSÉES ---
-    fwrite(buffer, 1, (bits_used + 7) / 8, file);
+    fwrite(buffer, sizeof(uchar), buffer_size, file);
+    
 
     fclose(file);
-    printf("Encodage terminé. %d bits écrits dans '%s'\n", bits_used, filename);
+    printf("Encodage terminé. Écriture dans '%s'\n", filename);
 }
 
 /*! fonction d'initialisation !*/

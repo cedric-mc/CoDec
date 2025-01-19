@@ -48,7 +48,7 @@ long get_file_size(FILE *file) {
 /**
  * Décode un fichier .dif et stocke les données dans un objet DiffImg
  */
-bool decode_dif(ImgDif *img, const char *filename) {
+bool decode_dif(DiffImg *dif, const char *filename) {
     FILE *file = fopen(filename, "rb");
     if (!file) {
         fprintf(stderr, "Erreur : Impossible d'ouvrir %s\n", filename);
@@ -71,8 +71,8 @@ bool decode_dif(ImgDif *img, const char *filename) {
         return false;
     }
 
-    img->width = read_uint16(file);
-    img->height = read_uint16(file);
+    int width = read_uint16(file);
+    int height = read_uint16(file);
 
     uchar num_levels = fgetc(file); // Toujours 4 niveaux
     uchar quant_bits[4];
@@ -80,19 +80,20 @@ bool decode_dif(ImgDif *img, const char *filename) {
         quant_bits[i] = fgetc(file);
     }
 
-    img->first = fgetc(file); // Premier pixel
+    uchar first = fgetc(file); // Premier pixel
 
     printf("Magic Number: 0x%X\n", magic);
-    printf("Taille: %d x %d\n", img->width, img->height);
+    printf("Taille: %d x %d\n", width, height);
     printf("Quantificateur: %d niveaux, Bits: {%d, %d, %d, %d}\n", num_levels, quant_bits[0], quant_bits[1], quant_bits[2], quant_bits[3]);
-    printf("Premier pixel: %d\n", img->first);
+    printf("Premier pixel: %d\n", first);
 
     // --- CHARGEMENT DU BUFFER COMPRESSÉ ---
-    int N = img->width * img->height;
-    long data_size = file_size - 12;  // Taille réelle des données compressées
+    size_t N = width * height;
+    printf("N = %ld\n", N);
+    size_t data_size = N * 12;  // Taille réelle des données compressées
     printf("Taille réelle des données compressées : %ld octets\n", data_size);
 
-    uchar *compressed_data = (uchar *)malloc(data_size);
+    uchar *compressed_data = calloc(data_size, sizeof(uchar)); // Allocation du buffer compressé
     if (!compressed_data) {
         fprintf(stderr, "Erreur d'allocation du buffer compressé.\n");
         fclose(file);
@@ -109,27 +110,34 @@ bool decode_dif(ImgDif *img, const char *filename) {
     }
 
     // --- DÉCOMPRESSION ---
-    dword *decoded_data = (dword *)malloc(N * 1.5);
+    dword *decoded_data = calloc(N*12, sizeof(dword)); // Allocation du buffer de décompression
     if (!decoded_data) {
         fprintf(stderr, "Erreur d'allocation du buffer de décompression.\n");
         free(compressed_data);
         return false;
     }
 
-    int num_decoded = decode_differences((uchar *)decoded_data, compressed_data, N - 1);
+    printf("Décompression des données...\n");
+    int num_decoded = decode_differences(decoded_data, compressed_data, data_size);
 
-    if (num_decoded < N - 1) {
-        fprintf(stderr, "Erreur de décompression: %d valeurs extraites au lieu de %d\n", num_decoded, N - 1);
-        free(compressed_data);
-        free(decoded_data);
-        return false;
-    }
+    // if (num_decoded != N) {
+    //     fprintf(stderr, "Erreur de décompression: %d valeurs extraites au lieu de %d\n", num_decoded, N - 1);
+    //     free(compressed_data);
+    //     free(decoded_data);
+    //     return false;
+    // }
 
-    // Reconstruction de l'image
-    decoded_data[0] = img->first;
-    for (int i = 1; i < N; i++) {
-        decoded_data[i] += decoded_data[i - 1];
+    // Remplissage de la structure DiffImg
+    printf("ttoerrb");
+    difalloc(dif, width, height);
+    dif->first = first;
+    dword difmax = 0;
+    for (int i = 0; i < N; i++) {
+        dif->map[i] = decoded_data[i];
+        if (difmax < abs(decoded_data[i])) difmax = abs(decoded_data[i]);
     }
+    dif->difmax = difmax;
+    printf("%d y omax", difmax);
 
     free(compressed_data);
     free(decoded_data);
@@ -139,20 +147,17 @@ bool decode_dif(ImgDif *img, const char *filename) {
 
 /*! fonction d'initialisation !*/
 void init(void) {
-    g2x_PixmapPreload(img);
-    int w = img->width, h = img->height;
-    
-    difalloc(&dif, w, h);
-    pixtodif_encode(img, &dif);
+    // g2x_PixmapPreload(img);
+    int w = dif.width, h = dif.height;
     
     g2x_PixmapAlloc(&visu, w, h, 1, 255);
     diftovisu(&dif, visu);
 
-    g2x_PixmapAlloc(&orig, w, h, 1, 255);
-    diftopix(&dif, orig);
+    // g2x_PixmapAlloc(&orig, w, h, 1, 255);
+    // diftopix(&dif, orig);
 
-    createDiffImg(&histogramDiff, &dif);
-    createImg(&histogramImg, img);
+    // createDiffImg(&histogramDiff, &dif);
+    // createImg(&histogramImg, img);
 }
 
 /* passe la copie en négatif */
@@ -185,19 +190,7 @@ void evts(void)
 
 /*! fonction de dessin        !*/
 void draw(void) {
-    if (SWAP_DIFF && SWAP_HISTOGRAM_DIFF) {
-        g2x_PixmapShow(visu, true);
-        display_histogram(&histogramDiff);
-    } else if (!SWAP_DIFF && SWAP_HISTOGRAM_IMG) {
-        g2x_PixmapRecall(img, true);
-        display_histogram(&histogramImg);
-    } else if (SWAP_DIFF && !SWAP_HISTOGRAM_DIFF) {
-        g2x_PixmapShow(visu, true);
-    } else if (!SWAP_DIFF && !SWAP_HISTOGRAM_IMG) {
-        g2x_PixmapRecall(img, true);
-    } else {
-        g2x_PixmapRecall(img, true);
-    }
+    g2x_PixmapShow(visu, true);
 }
 
 /*! fonction de sortie        !*/

@@ -58,49 +58,49 @@ extern void pull_bits(BitStream *curr, uchar *dst, size_t size)
     *dst |= (*(curr->ptr)) >> curr->cap; /* (dst>>(8-3) : [-----fgh] et capacité rbit:8-3=5 */
 } /* => dst:[abcde---]|[-----fgh]->[abcdefgh] */
 
-extern int encode_differences(unsigned char *dest, int *src, int N) {
+extern int encode_differences(unsigned char *dest, dword *src, int N) {
     BitStream stream = {dest, CHAR_BIT};
-    // int total_bits = 0;
+    int total_bits = 0;
 
     for (int i = 0; i < N; i++) {
-        int d = src[i];                        // Différence à encoder
-        unsigned char sign = (d < 0) ? 1 : 0;  // Signe de la différence
-        unsigned int abs_d = (d < 0) ? -d : d; // Valeur absolue de la différence
+        dword d = src[i];                        // Différence à encoder
+        char sign = (d < 0) ? 1 : 0;  // Signe de la différence
+        dword abs_d = (d < 0) ? -d : d; // Valeur absolue de la différence
 
         if (abs_d < 2) { // Intervalle [0, 2[
             push_bits(&stream, 0b0, 1);   // Préfixe : 1 bit
             push_bits(&stream, abs_d, 1); // Valeur : 1 bit
             push_bits(&stream, sign, 1);  // Signe : 1 bit
-            // total_bits += 3;             // Total : 3 bits
+            total_bits += 3;             // Total : 3 bits
         } else if (abs_d < 6) { // Intervalle [2, 6[
             push_bits(&stream, 0b10, 2);      // Préfixe : 2 bits
             push_bits(&stream, abs_d - 2, 2); // Valeur : 2 bits
             push_bits(&stream, sign, 1);      // Signe : 1 bit
-            // total_bits += 5;                  // Total : 5 bits
+            total_bits += 5;                  // Total : 5 bits
         } else if (abs_d < 22) { // Intervalle [6, 22[
             push_bits(&stream, 0b110, 3);     // Préfixe : 3 bits
             push_bits(&stream, abs_d - 6, 4); // Valeur : 4 bits
             push_bits(&stream, sign, 1);      // Signe : 1 bit
-            // total_bits += 8;                  // Total : 8 bits
+            total_bits += 8;                  // Total : 8 bits
         } else { // Intervalle [22, 256[
             push_bits(&stream, 0b111, 3);      // Préfixe : 3 bits
             push_bits(&stream, abs_d - 22, 8); // Valeur : 8 bits
             push_bits(&stream, sign, 1);       // Signe : 1 bit
-            // total_bits += 12;                  // Total : 12 bits
+            total_bits += 12;                  // Total : 12 bits
         }
     }
 
-    return (int)(stream.ptr - dest) * CHAR_BIT + (CHAR_BIT - stream.cap); // return total_bits;
+    return total_bits;
 }
 
-int decode_differences(uchar *dest, uchar *src, int P) {
+int decode_differences(dword *dest, uchar *src, int P) {
     BitStream stream = {src, CHAR_BIT};
     int N = 0;
-    signed char first_pixel;
 
     for (int i = 0; i < P; i++) {
         uchar prefix = 0;
-        char value, sign;
+        dword value = 0;
+        char sign = 0;
         for (int j = 0; j < 3; j++) {
             uchar bit;
             pull_bits(&stream, &bit, 1);
@@ -137,35 +137,10 @@ int decode_differences(uchar *dest, uchar *src, int P) {
             }
         }
 
-        char decoded_value = (sign == 1) ? -value : value;
-        dest[N] = decoded_value;
-        N++;
+        // char decoded_value = (sign == 1) ? -value : value;
+        value = (sign == 1) ? -value : value;
+        dest[N++] = value;
     }
 
     return N;
-}
-
-void save_dif_file(const char *filename, G2Xpixmap *img, DiffImg *dif) {
-    FILE *file = fopen(filename, "wb");
-    if (!file) {
-        perror("Erreur d'ouverture du fichier .dif");
-        return;
-    }
-
-    int N = img->width * img->height;
-    unsigned char *buffer = malloc(1.5 * N);
-    int encoded_size = encode_differences(buffer, dif->map, N);
-
-    unsigned short magic = 0xD1FF;
-    fwrite(&magic, sizeof(unsigned short), 1, file);
-    fwrite(&img->width, sizeof(unsigned short), 1, file);
-    fwrite(&img->height, sizeof(unsigned short), 1, file);
-    unsigned char quant[4] = {0x01, 0x02, 0x04, 0x08};
-    fwrite(quant, sizeof(unsigned char), 4, file);
-    fwrite(&dif->first, sizeof(unsigned char), 1, file);
-    fwrite(buffer, sizeof(unsigned char), (encoded_size + 7) / 8, file);
-
-    free(buffer);
-    fclose(file);
-    printf("✅ Image enregistrée sous : %s\n", filename);
 }
