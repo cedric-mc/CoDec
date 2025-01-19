@@ -205,15 +205,43 @@ void evts(void)
 
 /*! fonction de dessin        !*/
 void draw(void) {
-    switch (SWAP_IMG) {
-        case false:
-            g2x_PixmapShow(orig, true);
-            display_histogram(&histogramImg);
-            break;
-        case true:
-            g2x_PixmapShow(visu, true);
-            display_histogram(&histogramDiff);
-            break;
+    // switch (SWAP_IMG) {
+    //     case false:
+    //         g2x_PixmapShow(orig, true);
+    //         display_histogram(&histogramImg);
+    //         break;
+    //     case true:
+    //         g2x_PixmapShow(visu, true);
+    //         display_histogram(&histogramDiff);
+    //         break;
+    // }
+
+    // if (SWAP_DIFF && SWAP_HISTOGRAM_DIFF) {
+    //     g2x_PixmapShow(visu, true);
+    //     display_histogram(&histogramDiff);
+    // } else if (!SWAP_DIFF && SWAP_HISTOGRAM_IMG) {
+    //     g2x_PixmapRecall(img, true);
+    //     display_histogram(&histogramImg);
+    // } else if (SWAP_DIFF && !SWAP_HISTOGRAM_DIFF) {
+    //     g2x_PixmapShow(visu, true);
+    // } else if (!SWAP_DIFF && !SWAP_HISTOGRAM_IMG) {
+    //     g2x_PixmapRecall(img, true);
+    // } else {
+    //     g2x_PixmapRecall(img, true);
+    // }
+
+    if (SWAP_IMG && SWAP_HISTOGRAM_IMG) { // Si on affiche l'image originale et l'histogramme de l'image originale
+        g2x_PixmapShow(visu, true);
+        display_histogram(&histogramDiff);
+    } else if (!SWAP_IMG && SWAP_HISTOGRAM_DIFF) {
+        g2x_PixmapShow(orig, true);
+        display_histogram(&histogramImg);
+    } else if (SWAP_IMG && !SWAP_HISTOGRAM_IMG) {
+        g2x_PixmapShow(visu, true);
+    } else if (!SWAP_IMG && !SWAP_HISTOGRAM_DIFF) {
+        g2x_PixmapShow(orig, true);
+    } else {
+        g2x_PixmapShow(visu, true);
     }
 }
 
