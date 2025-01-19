@@ -57,7 +57,116 @@ extern void save_dif_file(const char *filename, G2Xpixmap *pix, DiffImg *dif, En
     printf("Encodage terminé. Écriture dans '%s'\n", filename);
 }
 
-void save_pgm_file(const char *filename, G2Xpixmap *pix) {
+/**
+ * Lit un entier non signé de 2 octets (big-endian) depuis un fichier
+ */
+uint16_t read_uint16(FILE *file) {
+    uchar high = fgetc(file);
+    uchar low = fgetc(file);
+    return (high << 8) | low;
+}
+
+/**
+ * Vérifie la taille d'un fichier
+ */
+long get_file_size(FILE *file) {
+    fseek(file, 0, SEEK_END);
+    long size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    return size;
+}
+
+/**
+ * Décode un fichier .dif et stocke les données dans un objet DiffImg
+ */
+extern bool decode_dif(DiffImg *dif, const char *filename) {
+    FILE *file = fopen(filename, "rb");
+    if (!file) {
+        fprintf(stderr, "Erreur : Impossible d'ouvrir %s\n", filename);
+        return false;
+    }
+
+    // Vérifier la taille du fichier avant allocation
+    long file_size = get_file_size(file);
+    if (file_size < 12) { // L'en-tête fait 11 octets minimum + 1 octet pour first
+        fprintf(stderr, "Erreur : Fichier trop petit pour être valide !\n");
+        fclose(file);
+        return false;
+    }
+
+    // --- LECTURE DE L'EN-TÊTE ---
+    uint16_t magic = read_uint16(file);
+    if (magic != 0xD1FF) {
+        fprintf(stderr, "Erreur : Magic Number incorrect (0x%X)\n", magic);
+        fclose(file);
+        return false;
+    }
+
+    int width = read_uint16(file);
+    int height = read_uint16(file);
+
+    uchar num_levels = fgetc(file); // Toujours 4 niveaux
+    uchar quant_bits[4];
+    for (int i = 0; i < 4; i++) {
+        quant_bits[i] = fgetc(file);
+    }
+
+    uchar first = fgetc(file); // Premier pixel
+
+    printf("Magic Number: 0x%X\n", magic);
+    printf("Taille: %d x %d\n", width, height);
+    printf("Quantificateur: %d niveaux, Bits: {%d, %d, %d, %d}\n", num_levels, quant_bits[0], quant_bits[1], quant_bits[2], quant_bits[3]);
+    printf("Premier pixel: %d\n", first);
+
+    // --- CHARGEMENT DU BUFFER COMPRESSÉ ---
+    size_t N = width * height;
+    size_t data_size = N * 12;  // Taille réelle des données compressées
+    printf("Taille réelle des données compressées : %ld octets\n", data_size);
+
+    uchar *compressed_data = calloc(data_size, sizeof(uchar)); // Allocation du buffer compressé
+    if (!compressed_data) {
+        fprintf(stderr, "Erreur d'allocation du buffer compressé.\n");
+        fclose(file);
+        return false;
+    }
+
+    size_t read_size = fread(compressed_data, 1, data_size, file);
+    fclose(file);
+
+    if (read_size < data_size) {
+        fprintf(stderr, "Erreur : Lecture incomplète (%ld octets lus sur %ld attendus)\n", read_size, data_size);
+        free(compressed_data);
+        return false;
+    }
+
+    // --- DÉCOMPRESSION ---
+    dword *decoded_data = calloc(N*12, sizeof(dword)); // Allocation du buffer de décompression
+    if (!decoded_data) {
+        fprintf(stderr, "Erreur d'allocation du buffer de décompression.\n");
+        free(compressed_data);
+        return false;
+    }
+
+    printf("Décompression des données...\n");
+    int num_decoded = decode_differences(decoded_data, compressed_data, data_size);
+
+    // Remplissage de la structure DiffImg
+    difalloc(dif, width, height);
+    dif->first = first;
+    dword difmax = 0;
+    for (int i = 0; i < N; i++) {
+        dif->map[i] = decoded_data[i];
+        if (difmax < abs(decoded_data[i])) difmax = abs(decoded_data[i]);
+    }
+    dif->difmax = difmax;
+
+    free(compressed_data);
+    free(decoded_data);
+
+    return true;
+}
+
+extern void save_pgm_file(const char *filename, G2Xpixmap *pix) {
     FILE *file = fopen(filename, "wb");
     if (!file) {
         fprintf(stderr, "Erreur : Impossible d'ouvrir %s\n", filename);

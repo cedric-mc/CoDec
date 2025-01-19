@@ -34,7 +34,7 @@ pgmtodif: difimg.o histogram.o differences.o encodage.o pgmtodif.o
 	$(CC) $^ $(LFLAGS) -o $@
 
 # Règle spécifique pour l'exécutable 'diftopgm'
-diftopgm: difimg.o histogram.o differences.o diftopgm.o
+diftopgm: difimg.o histogram.o differences.o encodage.o diftopgm.o
 	$(CC) $^ $(LFLAGS) -o $@
 
 # Règle générique pour créer un fichier .o à partir d'un fichier .c

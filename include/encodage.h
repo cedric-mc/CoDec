@@ -18,7 +18,8 @@ typedef struct {
 
 void initEncodage(Encodage *encodage, DiffImg *dif);
 void save_dif_file(const char *filename, G2Xpixmap *pix, DiffImg *dif, Encodage *encodage);
-
+bool decode_dif(DiffImg *dif, const char *filename);
+void save_pgm_file(const char *filename, G2Xpixmap *pix);
 
 
 #endif /* ENCODAGE_H */
