@@ -35,13 +35,6 @@ extern void createDiffImg(Histogram *histogramDiff, DiffImg *dif) {
 
 extern void createImg(Histogram *histogramImg, G2Xpixmap *img) {
     if (!img || !img->map || !img->end) {
-        if (!img) {
-            fprintf(stderr, "Erreur : img est NULL, impossible de créer l'histogramme de l'image\n");
-        } else if (!img->map) {
-            fprintf(stderr, "Erreur : img->map est NULL, impossible de créer l'histogramme de l'image\n");
-        } else if (!img->end) {
-            fprintf(stderr, "Erreur : img->end est NULL, impossible de créer l'histogramme de l'image\n");
-        }
         fprintf(stderr, "Erreur : données de l'image non valides, impossible de créer l'histogramme de l'image\n");
         return;
     }

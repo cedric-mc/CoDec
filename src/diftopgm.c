@@ -168,7 +168,7 @@ void init(void) {
     initHistogram(&histogramDiff);
     initHistogram(&histogramImg);
     createDiffImg(&histogramDiff, &dif);
-    createImg(&histogramImg, &img);
+    createImg(&histogramImg, orig);
 }
 
 /* passe la copie en négatif */
