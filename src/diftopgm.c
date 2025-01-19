@@ -89,7 +89,6 @@ bool decode_dif(DiffImg *dif, const char *filename) {
 
     // --- CHARGEMENT DU BUFFER COMPRESSÉ ---
     size_t N = width * height;
-    printf("N = %ld\n", N);
     size_t data_size = N * 12;  // Taille réelle des données compressées
     printf("Taille réelle des données compressées : %ld octets\n", data_size);
 

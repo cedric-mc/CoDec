@@ -56,3 +56,15 @@ extern void save_dif_file(const char *filename, G2Xpixmap *pix, DiffImg *dif, En
     fclose(file);
     printf("Encodage terminé. Écriture dans '%s'\n", filename);
 }
+
+void save_pgm_file(const char *filename, G2Xpixmap *pix) {
+    FILE *file = fopen(filename, "wb");
+    if (!file) {
+        fprintf(stderr, "Erreur : Impossible d'ouvrir %s\n", filename);
+        return;
+    }
+
+    fprintf(file, "P5\n%d %d\n255\n", pix->width, pix->height);
+    fwrite(pix->map, 1, pix->width * pix->height, file);
+    fclose(file);
+}

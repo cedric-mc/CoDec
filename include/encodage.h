@@ -20,4 +20,5 @@ void initEncodage(Encodage *encodage, DiffImg *dif);
 void save_dif_file(const char *filename, G2Xpixmap *pix, DiffImg *dif, Encodage *encodage);
 
 
+
 #endif /* ENCODAGE_H */
